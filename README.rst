@@ -8,6 +8,12 @@ This is an interactive `Fennel`_ REPL plugin for Neovim.  It allows evaluating
 arbitrary Fennel expressions in a running process.  The expression is sent to
 the application, evaluated, and the result is sent back to Neovim.
 
+.. warning::
+
+   This plugin executes arbitrary code.  Do not start a REPL automatically.  Do
+   not run code you do not trust.  There is no sandboxing going on here, what
+   you enter will be executed.
+
 
 Installation and setup
 ######################
@@ -25,6 +31,11 @@ the REPL yourself.
 Setup
 =====
 
+Execute `:Fennel args...` (e.g. `Fennel love . --repl`) to start the process
+which exposes a Fennel REPL over its standard IO.  This command will change in
+the future!  For now the REPL must conform to the protocol, but later it will
+be possible to upgrade the REPL.
+
 
 Status of the plugin
 ####################
@@ -32,8 +43,14 @@ Status of the plugin
 The public interface of the plugin will change.  Do not rely on it.
 
 It works as a basic REPL: you send it text and get text back.  It is the same
-as the REPL you get when you run `fennel` from the command-line.  There are a
-lot of niceties to add though:
+as the REPL you get when you run `fennel` from the command-line.
+
+These features are absolutely necessary for a fully working REPL:
+
+- [ ] Handling of messages sent to the process standard output
+- [ ] Handling of messages received from the process standard input
+
+There are a lot of niceties to add:
 
 - [ ] Interactive stacktrace: click a line and get taken to that location
 - [ ] Auto-completion on the REPL
