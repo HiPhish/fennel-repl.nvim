@@ -80,11 +80,11 @@ end
 
 local function on_exit(job_id, exit_code, _event)
 	local buffer = instances[job_id].buffer
-	local msg = string.format(';;; Fennel terminated with exit code %d', exit_code)
+	lib.place_comment((';; Fennel terminated with exit code %d'):format(exit_code))
 	fn.prompt_setprompt(buffer, '')
-	fn.append('$', msg)
 	instances:drop(nvim_buf_get_var(0, 'fennel_repl_jobid'))
 	fn.prompt_setcallback(buffer, dead_prompt_callback)
+	api.nvim_del_current_line()  -- Remove the trailing prompt
 end
 
 ---Fixed options for all newly created jobs

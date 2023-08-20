@@ -1,9 +1,10 @@
 -- SPDX-License-Identifier: MIT
 
 local fn = vim.fn
-local nvim_buf_get_var       = vim.api.nvim_buf_get_var
-local nvim_buf_add_highlight = vim.api.nvim_buf_add_highlight
-local instances = require 'fennel-repl.instances'
+local nvim_buf_get_var = vim.api.nvim_buf_get_var
+local instances        = require 'fennel-repl.instances'
+local lib              = require 'fennel-repl.lib'
+
 local M = {}
 
 -- Operation identifiers, repeated here to avoid typos
@@ -20,18 +21,6 @@ local help        = 'help'
 local reload      = 'reload'
 local reset       = 'reset'
 
---- Maps the second character from an escape sequence to its actual character
-local escape_chars = {
-    a = '\a',
-    b = '\b',
-    f = '\f',
-	n = '\n',
-    r = '\r',
-    t = '\t',
-    v = '\v',
-}
-
-
 ---Sets the prompt string of the prompt buffer, deletes the previous empty
 ---prompt line if there was any.  When we change the prompt there will be an
 ---empty line with the previous prompt which we want to get rid of.
@@ -44,39 +33,6 @@ local function switch_prompt(buffer, prompt)
 	end
 	fn.prompt_setprompt(buffer, prompt)
 end
-
-local function unescape(text)
-	-- This is fragile, what if there is a double-backslash before the
-	-- character?
-	return text:gsub('\\([abfnrtv])', escape_chars)
-end
-
-local function place_text(text)
-	local linenr = fn.line('$') - 2
-	for i, line in ipairs(fn.split(unescape(text), '\n')) do
-		fn.append(linenr + i, line)
-	end
-end
-
-local function place_output(text)
-	local linenr = fn.line('$') - 2
-	for i, line in ipairs(fn.split(unescape(text), '\n')) do
-		local linenr = linenr + i
-		fn.append(linenr, line)
-		nvim_buf_add_highlight(0, -1, 'FennelReplValue', linenr, 0, -1)
-	end
-end
-
-local function place_error(text)
-	-- This should be distinct from regular output.
-	local linenr = fn.line('$') - 2
-	for i, line in ipairs(fn.split(unescape(text), '\n')) do
-		local linenr = linenr + i
-		fn.append(linenr, line)
-		nvim_buf_add_highlight(0, -1, 'FennelReplError', linenr, 0, -1)
-	end
-end
-
 
 local function handle_incomplete_message(response)
 	-- print('The line was incomplete')
@@ -92,7 +48,7 @@ local function handle_incomplete_message(response)
 end
 
 local function handle_error_response(response)
-	place_error(response.data)
+	lib.place_error(response.data)
 	response = coroutine.yield()
 	local op = response.op
 	if op == done then
@@ -114,6 +70,10 @@ function M.init(msg)
 		instance.protocol = protocol
 		instance.fennel   = fennel
 		instance.lua      = lua
+		lib.place_comment(string.format([[
+;; Welcome to Fennel %s on %s
+;; REPL protocol version %s
+;; Use ,help to see available commands]], fennel, lua, protocol))
 	elseif status == error then
 		local data = msg.data
 		fn.jobstop(jobid)
@@ -159,7 +119,7 @@ function M.eval(response)
 		error(string.format('Invalid response to evaluation: %q', op))
 	end
 
-	place_output(table.concat(values, '\t'))
+	lib.place_output(table.concat(values, '\t'))
 	-- print('Done with evaluation')
 end
 
@@ -180,7 +140,7 @@ function M.complete(response)
 	if op ~= done then
 		-- TODO: Handle error
 	end
-	place_text(table.concat(values, '\t'))
+	lib.place_text(table.concat(values, '\t'))
 end
 
 
@@ -201,7 +161,7 @@ function M.doc(response)
 	if op ~= done then
 		-- TODO: handle error
 	end
-	place_text(table.concat(values, '\t'))
+	lib.place_text(table.concat(values, '\t'))
 end
 
 -- Reload the module.
@@ -215,8 +175,8 @@ function M.reload(response)
 	if op == error then
 		local data, traceback = response.data, response.traceback
 		coroutine.yield()  -- So we can receive the 'done' instruction
-		place_error(data)
-		place_error(traceback)
+		lib.place_error(data)
+		lib.place_error(traceback)
 	elseif op ~= reload then
 		-- TODO: handle error
 	end
@@ -226,7 +186,7 @@ function M.reload(response)
 	if op ~= done then
 		-- TODO: handle error
 	end
-	place_text(table.concat(values, '\t'))
+	lib.place_text(table.concat(values, '\t'))
 end
 
 -- Print the filename and line number for a given function.
@@ -240,7 +200,7 @@ function M.find(response)
 	if op == error then
 		if response.type == 'repl' then
 			coroutine.yield()  -- So we can receive the 'done' instruction
-			place_error(response.data)
+		lib.place_error(response.data)
 			return
 		end
 		-- TODO: handle error
@@ -255,7 +215,7 @@ function M.find(response)
 	if op ~= done then
 		-- TODO: handle error
 	end
-	place_text(table.concat(values, '\t'))
+	lib.place_text(table.concat(values, '\t'))
 end
 
 -- Compiles the expression into Lua and returns the result.
@@ -272,7 +232,7 @@ function M.compile(response)
 		-- mode, but in such a way that the text will be sent for
 		-- compilation, not evaluation.
 		local data = response.data
-		place_error(data)
+		lib.place_error(data)
 	elseif op ~= compile then
 		-- TODO: handle error
 	end
@@ -283,7 +243,7 @@ function M.compile(response)
 	if op ~= done then
 		-- TODO handle error
 	end
-	place_text(table.concat(values))
+	lib.place_text(table.concat(values))
 end
 
 -- Produce all functions matching a pattern in all loaded modules.
@@ -303,7 +263,7 @@ function M.apropos(response)
 	if op ~= done then
 		-- TODO: Handle error
 	end
-	place_text(table.concat(values, '\t'))
+	lib.place_text(table.concat(values, '\t'))
 end
 
 -- Produce all functions that match the pattern in their docs.
@@ -323,7 +283,7 @@ function M.apropos_doc(response)
 	if op ~= done then
 		-- TODO: Handle error
 	end
-	place_text(table.concat(values, '\t'))
+	lib.place_text(table.concat(values, '\t'))
 end
 
 -- Produce all documentation matching a pattern in the function name.
@@ -352,7 +312,7 @@ function M.help(response)
 		-- TODO: handle error
 	end
 
-	place_text(table.concat(values, '\t'))
+	lib.place_text(table.concat(values, '\t'))
 end
 
 -- Erase all REPL-scope.
@@ -374,7 +334,7 @@ function M.reset(response)
 		-- TODO: handle error
 	end
 
-	place_text(table.concat(values, '\t'))
+	lib.place_text(table.concat(values, '\t'))
 end
 
 -- Leave the REPL.
