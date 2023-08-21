@@ -18,6 +18,7 @@ local done        = 'done'
 local error       = 'error'
 local eval        = 'eval'
 local help        = 'help'
+local print_repl  = 'print'
 local reload      = 'reload'
 local reset       = 'reset'
 
@@ -88,39 +89,42 @@ function M.eval(response)
 	if response.op ~= accept then
 		error(string.format('Invalid response to evaluation: %s', vim.inspect(response)))
 	end
-	-- print 'Accepted'
 
-	response = coroutine.yield()
-	op = response.op
 	local jobid = nvim_buf_get_var(0, 'fennel_repl_jobid')
 	local instance = instances[jobid]
-	if op == error then
-		-- print('An error')
-		local type, data = response.type, response.data
-		if type == 'parse' and data == 'incomplete message' then
-			handle_incomplete_message(response)
-		else
-			instance.pending = nil
-			handle_error_response(response)
-		end
-		return
-	elseif op ~= eval then
-		print 'An unexpected error occurred'
-		error(string.format('Invalid response to evaluation: %s', vim.inspect(response)))
-	end
-	-- print('Server has accepted text '.. vim.inspect(response.values))
-	instance.pending = nil
-	switch_prompt(vim.fn.bufnr(''), '>> ')
-	local values = response.values
+	local values = {}
 
 	response = coroutine.yield()
 	op = response.op
-	if op ~= done then
-		error(string.format('Invalid response to evaluation: %q', op))
+	while op ~= done do
+		if op == error then
+			-- print('An error')
+			local type, data = response.type, response.data
+			if type == 'parse' and data == 'incomplete message' then
+				handle_incomplete_message(response)
+			else
+				instance.pending = nil
+				handle_error_response(response)
+			end
+			return
+		elseif op == print_repl then
+			local descr, data = response.descr, response.data
+			if descr == 'stdout' then
+				lib.place_text(data)
+			end
+		elseif op == eval then
+			instance.pending = nil
+			switch_prompt(vim.fn.bufnr(''), '>> ')
+			values = fn.extend(values, response.values)
+		else
+			print 'An unexpected error occurred'
+			error(string.format('Invalid response to evaluation: %s', vim.inspect(response)))
+		end
+		response = coroutine.yield()
+		op = response.op
 	end
 
 	lib.place_output(table.concat(values, '\t'))
-	-- print('Done with evaluation')
 end
 
 -- complete: produce all possible completions for a given input symbol.
