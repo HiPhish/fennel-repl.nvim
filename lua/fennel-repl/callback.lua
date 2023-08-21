@@ -15,7 +15,7 @@ local compile     = 'compile'
 local complete    = 'compile'
 local doc         = 'doc'
 local done        = 'done'
-local error       = 'error'
+local error_repl  = 'error'
 local eval        = 'eval'
 local help        = 'help'
 local print_repl  = 'print'
@@ -75,7 +75,7 @@ function M.init(msg)
 ;; Welcome to Fennel %s on %s
 ;; REPL protocol version %s
 ;; Use ,help to see available commands]], fennel, lua, protocol))
-	elseif status == error then
+	elseif status == error_repl then
 		local data = msg.data
 		fn.jobstop(jobid)
 		error(string.format('Error initialising Fennel REPL, status is %s', data))
@@ -97,7 +97,7 @@ function M.eval(response)
 	response = coroutine.yield()
 	op = response.op
 	while op ~= done do
-		if op == error then
+		if op == error_repl then
 			-- print('An error')
 			local type, data = response.type, response.data
 			if type == 'parse' and data == 'incomplete message' then
@@ -176,7 +176,7 @@ function M.reload(response)
 	end
 	response = coroutine.yield()
 	op = response.op
-	if op == error then
+	if op == error_repl then
 		local data, traceback = response.data, response.traceback
 		coroutine.yield()  -- So we can receive the 'done' instruction
 		lib.place_error(data)
@@ -201,7 +201,7 @@ function M.find(response)
 	end
 	response = coroutine.yield()
 	op = response.op
-	if op == error then
+	if op == error_repl then
 		if response.type == 'repl' then
 			coroutine.yield()  -- So we can receive the 'done' instruction
 		lib.place_error(response.data)
@@ -230,7 +230,7 @@ function M.compile(response)
 	end
 	response = coroutine.yield()
 	op = response.op
-	if op == error then
+	if op == error_repl then
 		-- TODO: It is possible for the argument to be spread over multiple
 		-- lines. We have to handle that error and put the REPL into pending
 		-- mode, but in such a way that the text will be sent for
