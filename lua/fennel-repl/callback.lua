@@ -19,6 +19,7 @@ local error_repl  = 'error'
 local eval        = 'eval'
 local help        = 'help'
 local print_repl  = 'print'
+local read_repl   = 'read'
 local reload      = 'reload'
 local reset       = 'reset'
 
@@ -112,6 +113,18 @@ function M.eval(response)
 			if descr == 'stdout' then
 				lib.place_text(data)
 			end
+		elseif op == read_repl then
+			local pipe = response.pipe
+			-- NOTE: We need to know the input mode so we can know when the
+			-- input is still incomplete. This is not possible with the current
+			-- version of the protocol (0.3.0)
+			vim.ui.input({prompt = 'Fennel input: ', cancelreturn = ''}, function(input)
+				local file = io.open(pipe, 'a')
+				if file then
+					pcall(file.write, file, input)
+					file:close()
+				end
+			end)
 		elseif op == eval then
 			instance.pending = nil
 			switch_prompt(vim.fn.bufnr(''), '>> ')

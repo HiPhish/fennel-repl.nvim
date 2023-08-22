@@ -48,7 +48,7 @@ as the REPL you get when you run `fennel` from the command-line.
 These features are absolutely necessary for a fully working REPL:
 
 - [X] Handling of messages sent to the process standard output
-- [ ] Handling of messages received from the process standard input
+- [X] Handling of messages received from the process standard input
 
 There are a lot of niceties to add:
 
