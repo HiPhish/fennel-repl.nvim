@@ -29,7 +29,12 @@ local function active_prompt_callback(text)
 		message = op.eval(instance.pending)
 		callback = cb.eval
 	elseif comma_command then
-		message = op.comma_ops[comma_command](comma_arg)
+		local comma_op = op.comma_ops[comma_command]
+		if not comma_op then
+			lib.place_error(string.format('Unknown command %s', comma_command))
+			return
+		end
+		message = comma_op(comma_arg)
 		callback = cb.comma_commands[comma_command]
 	else
 		instance.pending = text
