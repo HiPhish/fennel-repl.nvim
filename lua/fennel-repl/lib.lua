@@ -2,6 +2,7 @@
 
 local fn = vim.fn
 local nvim_buf_add_highlight = vim.api.nvim_buf_add_highlight
+local nvim_err_writeln       = vim.api.nvim_err_writeln
 
 ---Various helpers.
 local M = {}
@@ -97,6 +98,11 @@ function M.place_error(text)
 		fn.append(linenr, line)
 		nvim_buf_add_highlight(0, -1, 'FennelReplError', linenr, 0, -1)
 	end
+end
+
+---Shows an error message within Neovim.
+function M.echo_error(text)
+	nvim_err_writeln(text)
 end
 
 return M

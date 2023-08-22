@@ -83,6 +83,15 @@ function M.init(msg)
 	end
 end
 
+---An internal error we cannot recover from.  Just shut down the REPL and show
+---an error message.
+function M.internal_error(response)
+	local type, data = response.type, response.data
+	lib.echo_error(string.format('Fennel REPL internal error: %s\n%s', type, data))
+	local jobid = nvim_buf_get_var(0, 'fennel_repl_jobid')
+	fn.jobstop(jobid)
+end
+
 
 -- Evaluate a string of Fennel code.
 function M.eval(response)

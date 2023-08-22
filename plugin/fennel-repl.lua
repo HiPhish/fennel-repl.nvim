@@ -125,8 +125,9 @@ local function repl_start(args)
 	end
 
 	local instance = instances:new(jobid, command, buffer)
-	-- This could be a problem if the message has already arrived.
-	instance.callbacks[0] = coroutine.create(cb.init)
+	-- Could this be a problem if the message has already arrived?
+	instance.callbacks[ 0] = coroutine.create(cb.init)
+	instance.callbacks[-1] = coroutine.create(cb.internal_error)
 
 	-- Open the REPL buffer unless it is already open
 	local repl_open = false
