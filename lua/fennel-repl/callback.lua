@@ -50,7 +50,11 @@ local function handle_incomplete_message(response)
 end
 
 local function handle_error_response(response)
-	lib.place_error(response.data)
+	local data, traceback = response.data, response.traceback
+	lib.place_error(data)
+	if traceback then
+		lib.place_error(traceback)
+	end
 	response = coroutine.yield()
 	local op = response.op
 	if op == done then
