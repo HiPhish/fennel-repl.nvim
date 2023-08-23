@@ -52,10 +52,11 @@ These features are absolutely necessary for a fully working REPL:
 
 There are a lot of niceties to add:
 
-- [ ] Interactive stacktrace: click a line and get taken to that location
+- [X] Interactive stacktrace: click a line and get taken to that location
 - [ ] Auto-completion on the REPL
 - [ ] Syntax highlighting of user input (no idea how I can do that)
 - [ ] Documentation lookup (e.g. when pressing `K` while on a symbol)
+- [ ] Inspect an element (e.g. by pressing `<A-K>` while on a symbol)
 
 The following features are needed for a robust REPL experience:
 

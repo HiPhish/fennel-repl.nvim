@@ -1,9 +1,10 @@
 -- SPDX-License-Identifier: MIT
 
 local fn = vim.fn
-local nvim_buf_get_var = vim.api.nvim_buf_get_var
-local instances        = require 'fennel-repl.instances'
-local lib              = require 'fennel-repl.lib'
+local nvim_buf_get_var     = vim.api.nvim_buf_get_var
+local nvim_buf_set_extmark = vim.api.nvim_buf_set_extmark
+local instances            = require 'fennel-repl.instances'
+local lib                  = require 'fennel-repl.lib'
 
 local M = {}
 
@@ -49,11 +50,31 @@ local function handle_incomplete_message(response)
 	error(string.format('Invalid response to evaluation: %s', vim.inspect(response)))
 end
 
+---Handle an error response from the server.  Prints the error to the REPL
+---output and parses the traceback (if it exists).
 local function handle_error_response(response)
-	local data, traceback = response.data, response.traceback
-	lib.place_error(data)
+	local type, data, traceback = response.type, response.data, response.traceback
+	lib.place_error(string.format('%s error: %s', type, data))
+	-- Display the traceback
 	if traceback then
-		lib.place_error(traceback)
+		local instance = instances[nvim_buf_get_var(0, 'fennel_repl_jobid')]
+		-- We have to manually break up the traceback so we can parse each line
+		-- individually
+		for _, tb_line in ipairs(fn.split(lib.unescape(traceback), '\n')) do
+			lib.place_error(tb_line)
+			-- Not every line points to a file location
+			local start, stop, file, pos = tb_line:find('(%S+):(%d+):')
+			if start then
+				local lnum = fn.line('$') - 2
+				local opts = {
+					end_col = stop - 1,
+					hl_group = 'FennelReplErrorLink',
+					hl_mode = 'combine',
+				}
+				local extmark = nvim_buf_set_extmark(0, lib.namespace, lnum, start - 1, opts)
+				instance.links[extmark] = {file = file, lnum = tonumber(pos)}
+			end
+		end
 	end
 	response = coroutine.yield()
 	local op = response.op

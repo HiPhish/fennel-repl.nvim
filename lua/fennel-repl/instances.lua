@@ -24,6 +24,11 @@ function M:new(jobid, command, buffer)
 		-- incomplete fragments until a complete expression has been
 		-- submitted
 		pending = nil,
+		---Map of extmarks to file positions.  When a traceback contains a
+		---reference to a file and line number we store the corresponding
+		---extmark here.  When the user clicks the extmark we look up the
+		---location in this table.
+		links = {},
 	}
 	self[jobid] = instance
 	self.count = self.count + 1
