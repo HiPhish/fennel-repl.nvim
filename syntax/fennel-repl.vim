@@ -9,3 +9,5 @@ highlight default link FennelReplWarning WarningMsg
 
 " This is used for extmarks only and will be overlaid on top of the base group
 highlight default FennelReplErrorLink gui=underline cterm=underline
+
+let b:current_syntax = 'fennel-repl'
