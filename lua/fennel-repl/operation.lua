@@ -10,85 +10,94 @@ local M = {}
 -- OP: string key of the operation to apply to the data
 -- DATA: String value to operate on
 
--- eval: evaluate a string of Fennel code.
+---eval: evaluate a string of Fennel code.
+---@param code string  The code to evaluate
 function M.eval(code)
 	local id = generator:new()
 	return {id = id, eval = code}
 end
 
--- complete: produce all possible completions for a given input symbol.
+---complete: produce all possible completions for a given input symbol.
+---@param sym string  Symbol to complete
 function M.complete(sym)
 	local id = generator:new()
 	return {id = id, complete = sym}
 end
 
--- doc: produce documentation of a symbol.
+---doc: produce documentation of a symbol.
+---@param sym string  Symbol to complete
 function M.doc(sym)
 	local id = generator:new()
 	return {id = id, doc = sym}
 end
 
--- reload: reload the module.
+---reload: reload the module.
+---@param module string  Name of the module to reload
 function M.reload(module)
 	local id = generator:new()
 	return {id = id, reload = module}
 end
 
--- find: print the filename and line number for a given function.
+---find: print the filename and line number for a given function.
 function M.find(val)
 	local id = generator:new()
 	return {id = id, find = val}
 end
 
--- compile: compiles the expression into Lua and returns the result.
+---compile: compiles the expression into Lua and returns the result.
+---@param expr string  Expression to compile
 function M.compile(expr)
 	local id = generator:new()
 	return {id = id, compile = expr}
 end
 
--- apropos: produce all functions matching a pattern in all loaded modules.
+---apropos: produce all functions matching a pattern in all loaded modules.
+---@param re string  Regular expression
 function M.apropos(re)
 	local id = generator:new()
 	return {id = id, apropos = re}
 end
 
--- apropos-doc: produce all functions that match the pattern in their docs.
+---apropos-doc: produce all functions that match the pattern in their docs.
+---@param re string  Regular expression
 function M.apropos_doc(re)
 	local id = generator:new()
 	return {id = id, ['apropos-doc'] = re}
 end
 
--- apropos-show-docs: produce all documentation matching a pattern in the function name.
+---apropos-show-docs: produce all documentation matching a pattern in the function name.
+---@param re string  Regular expression
 function M.apropos_show_docs(re)
 	local id = generator:new()
 	return {id = id, ['apropos-show-docs'] = re}
 end
 
--- help: show REPL message in the REPL.
+---help: show REPL message in the REPL.
+---@param arg string  Keyword to get help for
 function M.help(arg)
 	local id = generator:new()
 	return {id = id, help = arg or ''}
 end
 
--- reset: erase all REPL-local scope.
+---reset: erase all REPL-local scope.
 function M.reset()
 	local id = generator:new()
 	return {id = id, reset = ''}
 end
 
--- exit: leave the REPL.
+---exit: leave the REPL.
 function M.exit(arg)
 	local id = generator:new()
 	return {id = id, exit = arg or ''}
 end
 
--- downgrade
+---downgrade
 function M.downgrade()
 	local id = generator:new()
 	return {id = id, downgrade = ''}
 end
 
--- Ignore the operation.
+---Ignore the operation.
 function M.nop()
 	local id = generator:new()
 return {id = id, nop = ''}

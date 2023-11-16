@@ -1,21 +1,41 @@
 -- SPDX-License-Identifier: MIT
 
+
+---@class (exact) Link
+---Link to a file location, usually from a stack trace.
+---@field file string   File name
+---@field lnum integer  Line number
+
+---@class (exact) Instance
+---Running instance of a Fennel REPL.
+---@field cmd       string   Command which started the Fennel process
+---@field buffer    integer  Prompt buffer ID
+---@field callbacks table    Pending coroutine callbacks
+---@field pending   string?  Incomplete command fragments
+---@field links     table<integer, Link>  Maps extmarks to file positions
+---@field protocol  string?  Protocol version in use
+---@field fennel    string?  Running Fennel version
+---@field lua       string?  Running Lua version
+
+
 ---Table keeping track of REPL instances and their state.  This table is
 ---mutable; as instances are added and removed its contents will change.  Do
 ---not add or remove entries manually, use the methods.
+---@class InstanceManager: table<integer, Instance>
+---@field count integer  Current number of registered instances
 local M = {
 	count = 0,
 }
 
 ---Sets up and registers a new REPL instance.
----@param jobid   number  ID of the REPL process job
----@param command string  Command executed by the OS to launch the REPL
----@param buffer  number  Buffer ID of the prompt buffer
----@return table instance  The new REPL instance object.
+---@param jobid   integer  ID of the REPL process job
+---@param command string   Command executed by the OS to launch the REPL
+---@param buffer  integer  Buffer ID of the prompt buffer
+---@return Instance instance  The new REPL instance object.
 function M:new(jobid, command, buffer)
+	---@type Instance
 	local instance = {
 		cmd = command,
-		-- Prompt buffer ID
 		buffer = buffer,
 		-- Maps an ID to the corresponding callback function.  The callback will be
 		-- executed when a message with that ID arrives from the server.
@@ -36,7 +56,7 @@ function M:new(jobid, command, buffer)
 end
 
 ---Unregisters a REPL instance.
----@param jobid number  ID of the REPL process job
+---@param jobid integer  ID of the REPL process job
 function M:drop(jobid)
 	self[jobid] = nil
 	self.count = self.count - 1

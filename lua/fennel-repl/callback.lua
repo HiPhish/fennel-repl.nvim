@@ -57,6 +57,7 @@ local function handle_error_response(response)
 	lib.place_error(string.format('%s error: %s', type, data))
 	-- Display the traceback
 	if traceback then
+		---@type Instance
 		local instance = instances[nvim_buf_get_var(0, 'fennel_repl_jobid')]
 		-- We have to manually break up the traceback so we can parse each line
 		-- individually
@@ -92,6 +93,7 @@ function M.init(msg)
 	local jobid = nvim_buf_get_var(0, 'fennel_repl_jobid')
 
 	if status == done then
+		---@type Instance
 		local instance = instances[jobid]
 		local protocol, fennel, lua = msg.protocol, msg.fennel, msg.lua
 		instance.protocol = protocol
@@ -126,6 +128,7 @@ function M.eval(response)
 	end
 
 	local jobid = nvim_buf_get_var(0, 'fennel_repl_jobid')
+	---@type Instance
 	local instance = instances[jobid]
 	local values = {}
 

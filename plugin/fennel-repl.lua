@@ -78,7 +78,7 @@ local function on_stdout(job_id, data, _name)
 end
 
 ---Display errors from the REPL as errors in Neovim.
-local function on_stderr(job_id, data, _name)
+local function on_stderr(_job_id, data, _name)
 	api.nvim_out_write(fn.join(data, '\n'))
 	api.nvim_out_write('\n')
 end
@@ -102,6 +102,7 @@ local jobopts = {
 }
 
 
+---The actual function behind starting the REPL
 local function repl_start(args)
 	local command = args.fargs
 	local binary = command[1]
