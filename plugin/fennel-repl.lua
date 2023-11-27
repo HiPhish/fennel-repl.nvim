@@ -1,6 +1,7 @@
 -- SPDX-License-Identifier: MIT
 local api = vim.api
 local fn  = vim.fn
+local nvim_win_set_option = api.nvim_win_set_option
 local nvim_buf_set_option = api.nvim_buf_set_option
 local nvim_buf_set_var    = api.nvim_buf_set_var
 local nvim_buf_get_var    = api.nvim_buf_get_var
@@ -20,6 +21,7 @@ local CONT_PROMPT = '.. '
 ---Callback function for all Fennel prompts
 local function active_prompt_callback(text)
 	local jobid = nvim_buf_get_var(0, 'fennel_repl_jobid')
+	---@type Instance
 	local instance = instances[jobid]
 	local comma_command, comma_arg = string.match(text, '^%s*,(%S+)%s*(.*)')
 
@@ -42,13 +44,14 @@ local function active_prompt_callback(text)
 		callback = cb.eval
 	end
 	instance.callbacks[message.id] = coroutine.create(callback)
+	instance.history:put(text)
 	print('Sending ' .. lib.format_message(message))
 	fn.chansend(jobid, {lib.format_message(message), ''})
 end
 
 ---Callback for terminated Fennel process; will delete the buffer when the user
 ---presses <ENTER>
-local function dead_prompt_callback(text)
+local function dead_prompt_callback(_text)
 	nvim_buf_delete(0, {force = true})
 end
 
@@ -149,6 +152,7 @@ local function repl_start(args)
 		vim.cmd {cmd = 'sbuffer', args = {fn.string(buffer)}}
 		vim.cmd {cmd = 'setlocal', args = {'nospell'}}
 		vim.cmd 'startinsert'
+		nvim_win_set_option(0, 'number', false)
 	end
 end
 

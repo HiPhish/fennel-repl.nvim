@@ -57,6 +57,9 @@ There are a lot of niceties to add:
 - [ ] Syntax highlighting of user input (no idea how I can do that)
 - [ ] Documentation lookup (e.g. when pressing `K` while on a symbol)
 - [ ] Inspect an element (e.g. by pressing `<A-K>` while on a symbol)
+- [ ] Cycle through history (e.g. up and down arrows); this is actually hard to
+  achieve because Neovim does not let me overwrite just the user's input and
+  messes up the state of the prompt buffer
 
 The following features are needed for a robust REPL experience:
 
