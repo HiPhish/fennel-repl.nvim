@@ -203,7 +203,8 @@ end
 
 
 -- Produce documentation of a symbol.
-function M.doc(response)
+---@param on_done fun(values: string[]): any?  What to do with the result
+function M.doc(response, on_done)
 	local op = response.op
 	if op ~= accept then
 		error(string.format('Invalid response to evaluation: %s', vim.inspect(response)))
@@ -218,6 +219,9 @@ function M.doc(response)
 	op = response.op
 	if op ~= done then
 		-- TODO: handle error
+	end
+	if on_done then
+		return on_done(values)
 	end
 	lib.place_text(table.concat(values, '\t'))
 end

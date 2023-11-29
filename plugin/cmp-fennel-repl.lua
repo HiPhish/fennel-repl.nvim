@@ -21,7 +21,13 @@ local source = {}
 ---Convert one completion value from the REPL to a completion item
 local function value_to_item(value)
 	local parts = vim.fn.split(value, '\\v\\.')
-	return {label = parts[#parts]}  -- Only keep the last part
+	-- Display only the last part, but keep the full value around
+	return {
+		label = parts[#parts],
+		labelDetails = {
+			description = value,
+		},
+	}
 end
 
 ---Returns the current word under the cursor in insert mode.  The expand
@@ -80,5 +86,35 @@ function source:complete(_params, callback)
 	vim.fn.chansend(jobid, {lib.format_message(msg), ''})
 end
 
+---Enrich the completion item with additional data from the REPL.  This is not
+---very efficient because of the extra round trips per item, but it works.
+---@param item lsp.CompletionItem
+---@param callback fun(completion_item: lsp.CompletionItem|nil)
+function source:resolve(item, callback)
+	local sym = item.labelDetails.description or ''
+	local jobid = vim.b.fennel_repl_jobid
+	local repl  = instances[jobid]
+	local msg   = op.doc(sym)
+
+	-- Fetch docstring from REPL and add it to the item
+	repl.callbacks[msg.id] = coroutine.create(function (response)
+		cb.doc(response, function(values)
+			local text = values[1]
+			item.documentation = string.gsub(text, '\\n', '\n')
+			callback(item)
+		end)
+	end)
+	vim.fn.chansend(jobid, {lib.format_message(msg), ''})
+
+	-- How can we get the type? It gets more complicated because the symbols we
+	-- get back might be special forms like 'set' which we cannot pass to the
+	-- 'type' function.  We could do something like this:
+	--
+	--   (let [(success thing) (pcall (. (require :fennel) :eval) sym)]
+	--       (if success (type thing) ""))
+	--
+	-- The 'sym' is a string, so we try to see if we can evaluate it to an
+	-- object.
+end
 
 cmp.register_source('fennel-repl', source)

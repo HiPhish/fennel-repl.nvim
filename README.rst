@@ -64,8 +64,8 @@ There are a lot of niceties to add:
   highlighting)
 - [ ] Auto-completion on the REPL
    - [X] Source for nvim-cmp
+   - [X] Include documentation for functions
    - [ ] Include the type of the completion item
-   - [ ] Include documentation for functions
 - [ ] Documentation lookup (e.g. when pressing `K` while on a symbol)
 - [ ] Inspect an element (e.g. by pressing `<A-K>` while on a symbol)
 - [ ] Cycle through history (e.g. up and down arrows); this is actually hard to
