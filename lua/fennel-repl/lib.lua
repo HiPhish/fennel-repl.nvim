@@ -77,7 +77,9 @@ end
 function M.place_text(text)
 	local linenr = fn.line('$') - 2
 	for i, line in ipairs(fn.split(M.unescape(text), '\n')) do
-		fn.append(linenr + i, line)
+		local linenr = linenr + i
+		fn.append(linenr, line)
+		nvim_buf_add_highlight(0, -1, 'fennelReplStdout', linenr, 0, -1)
 	end
 end
 

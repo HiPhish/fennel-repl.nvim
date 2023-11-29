@@ -15,6 +15,7 @@ highlight default link fennelReplCommand Identifier
 highlight default link fennelReplValue   Constant
 highlight default link fennelReplError   ErrorMsg
 highlight default link fennelReplWarning WarningMsg
+highlight default link fennelReplStdout  Normal
 
 " This is used for extmarks only and will be overlaid on top of the base group
 highlight default fennelReplErrorLink gui=underline cterm=underline

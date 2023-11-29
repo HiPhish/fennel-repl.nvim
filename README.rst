@@ -54,7 +54,8 @@ There are a lot of niceties to add:
 
 - [X] Interactive stacktrace: click a line and get taken to that location
 - [ ] Auto-completion on the REPL
-- [ ] Syntax highlighting of user input (no idea how I can do that)
+- [X] Syntax highlighting of user input (piggy-back on Fennel syntax
+  highlighting)
 - [ ] Documentation lookup (e.g. when pressing `K` while on a symbol)
 - [ ] Inspect an element (e.g. by pressing `<A-K>` while on a symbol)
 - [ ] Cycle through history (e.g. up and down arrows); this is actually hard to
