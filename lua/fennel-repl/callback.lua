@@ -177,8 +177,9 @@ function M.eval(response)
 	lib.place_output(table.concat(values, '\t'))
 end
 
--- complete: produce all possible completions for a given input symbol.
-function M.complete(response)
+---complete: produce all possible completions for a given input symbol.
+---@param on_done fun(values: string[]): any?  What to do with the result
+function M.complete(response, on_done)
 	local op = response.op
 	if op ~= accept then
 		-- TODO: Handle error
@@ -193,6 +194,9 @@ function M.complete(response)
 	op = response.op
 	if op ~= done then
 		-- TODO: Handle error
+	end
+	if on_done then
+		return on_done(values)
 	end
 	lib.place_text(table.concat(values, '\t'))
 end

@@ -36,6 +36,13 @@ which exposes a Fennel REPL over its standard IO.  This command will change in
 the future!  For now the REPL must conform to the protocol, but later it will
 be possible to upgrade the REPL.
 
+Auto completion
+===============
+
+A source named `fennel-repl` for `nvim-cmp`_ is included for convenience.  This
+source will probably become its own plugin in the future, so do not rely on it
+being here.
+
 
 Status of the plugin
 ####################
@@ -53,9 +60,12 @@ These features are absolutely necessary for a fully working REPL:
 There are a lot of niceties to add:
 
 - [X] Interactive stacktrace: click a line and get taken to that location
-- [ ] Auto-completion on the REPL
 - [X] Syntax highlighting of user input (piggy-back on Fennel syntax
   highlighting)
+- [ ] Auto-completion on the REPL
+   - [X] Source for nvim-cmp
+   - [ ] Include the type of the completion item
+   - [ ] Include documentation for functions
 - [ ] Documentation lookup (e.g. when pressing `K` while on a symbol)
 - [ ] Inspect an element (e.g. by pressing `<A-K>` while on a symbol)
 - [ ] Cycle through history (e.g. up and down arrows); this is actually hard to
