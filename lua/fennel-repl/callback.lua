@@ -69,7 +69,7 @@ local function handle_error_response(response)
 				local lnum = fn.line('$') - 2
 				local opts = {
 					end_col = stop - 1,
-					hl_group = 'FennelReplErrorLink',
+					hl_group = 'fennelReplErrorLink',
 					hl_mode = 'combine',
 				}
 				local extmark = nvim_buf_set_extmark(0, lib.namespace, lnum, start - 1, opts)

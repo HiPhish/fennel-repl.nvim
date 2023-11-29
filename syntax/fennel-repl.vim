@@ -1,13 +1,22 @@
 " SPDX-License-Identifier: MIT
 
+runtime! syntax/fennel.vim
+runtime! syntax/fennel.lua
+
+syntax match fennelReplPrompt /^>> /
+syntax match fennelReplPrompt /^\.\. /
+
+syntax match fennelReplCommand /,\w\+/
+
 " Link the special REPL highlight groups to default highlight groups
-highlight default link FennelReplComment Comment
-highlight default link FennelReplPrompt  Constant
-highlight default link FennelReplValue   Constant
-highlight default link FennelReplError   ErrorMsg
-highlight default link FennelReplWarning WarningMsg
+highlight default link fennelReplComment Comment
+highlight default link fennelReplPrompt  Ignore
+highlight default link fennelReplCommand Identifier
+highlight default link fennelReplValue   Constant
+highlight default link fennelReplError   ErrorMsg
+highlight default link fennelReplWarning WarningMsg
 
 " This is used for extmarks only and will be overlaid on top of the base group
-highlight default FennelReplErrorLink gui=underline cterm=underline
+highlight default fennelReplErrorLink gui=underline cterm=underline
 
 let b:current_syntax = 'fennel-repl'

@@ -86,7 +86,7 @@ function M.place_comment(text)
 	for i, line in ipairs(fn.split(M.unescape(text), '\n')) do
 		local linenr = linenr + i
 		fn.append(linenr, line)
-		nvim_buf_add_highlight(0, -1, 'FennelReplComment', linenr, 0, -1)
+		nvim_buf_add_highlight(0, -1, 'fennelReplComment', linenr, 0, -1)
 	end
 end
 
@@ -95,7 +95,7 @@ function M.place_output(text)
 	for i, line in ipairs(fn.split(M.unescape(text), '\n')) do
 		local linenr = linenr + i
 		fn.append(linenr, line)
-		nvim_buf_add_highlight(0, -1, 'FennelReplValue', linenr, 0, -1)
+		nvim_buf_add_highlight(0, -1, 'fennelReplValue', linenr, 0, -1)
 	end
 end
 
@@ -105,7 +105,7 @@ function M.place_error(text)
 	for i, line in ipairs(fn.split(M.unescape(text), '\n')) do
 		local linenr = linenr + i
 		fn.append(linenr, line)
-		nvim_buf_add_highlight(0, -1, 'FennelReplError', linenr, 0, -1)
+		nvim_buf_add_highlight(0, -1, 'fennelReplError', linenr, 0, -1)
 	end
 end
 
