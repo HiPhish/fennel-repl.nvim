@@ -62,11 +62,12 @@ There are a lot of niceties to add:
 - [X] Interactive stacktrace: click a line and get taken to that location
 - [X] Syntax highlighting of user input (piggy-back on Fennel syntax
   highlighting)
-- [ ] Auto-completion on the REPL
+- [X] Auto-completion on the REPL
    - [X] Source for nvim-cmp
    - [X] Include documentation for functions
-   - [ ] Include the type of the completion item
-- [ ] Documentation lookup (e.g. when pressing `K` while on a symbol)
+   - [ ] Include the type of the completion item (probably not useful with CMP
+     because the type of an object does not map onto an LSP completion type)
+- [X] Documentation lookup (e.g. when pressing `K` while on a symbol)
 - [ ] Inspect an element (e.g. by pressing `<A-K>` while on a symbol)
 - [ ] Cycle through history (e.g. up and down arrows); this is actually hard to
   achieve because Neovim does not let me overwrite just the user's input and

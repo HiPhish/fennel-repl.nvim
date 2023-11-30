@@ -17,4 +17,10 @@ vim.opt.iskeyword = {
 	'48-57', '128-247', '124', '126', '38', '94'
 }
 
+vim.keymap.set('n', 'K', '<Plug>(FennelReplDoc)', {
+	noremap = true,
+	buffer = 0,
+	desc = 'Look up documentation for the word under the cursor'
+})
+
 -- It would be nice if we could also click the traceback with the mouse
