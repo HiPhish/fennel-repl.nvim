@@ -60,7 +60,7 @@ local function open_window(text)
 	local lines = vim.fn.split(text, '\\\\n')
 	local width = 0
 	for _, line in ipairs(lines) do
-		local n = #line
+		local n = vim.fn.strchars(line)
 		if n > width then width = n end
 	end
 
@@ -119,11 +119,28 @@ function M.eval()
 	if not repl then return end
 	-- print('Code: ' .. code)
 
+	---Collected standard output from side effects
+	---@type string[]
+	local output = {}
+
+	local on_done = function(values)
+		local text = table.concat(values, '\t')
+		if #output > 0 then
+			local length = 0
+			for _, line in ipairs(output) do
+				length = math.max(length, vim.fn.strlen(line))
+			end
+			text = string.format('%s\\n%s\\n%s', text, vim.fn['repeat']('─', length), vim.fn.join(output, ''))
+		end
+		open_window(text)
+	end
+
+	local collect_stdout = function(data)
+		table.insert(output, data)
+	end
 	local msg = op.eval(code)
 	repl.callbacks[msg.id] = coroutine.create(function (response)
-		cb.eval(response, function (values)
-			open_window(table.concat(values, '\t'))
-		end)
+		cb.eval(response, on_done, collect_stdout)
 	end)
 	vim.fn.chansend(jobid, {lib.format_message(msg), ''})
 end

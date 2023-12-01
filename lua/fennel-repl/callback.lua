@@ -122,7 +122,8 @@ end
 
 -- Evaluate a string of Fennel code.
 ---@param on_done fun(values: string[]): any?  What to do with the result
-function M.eval(response, on_done)
+---@param on_stdout fun(data: string): any?  What to do with output to stdout
+function M.eval(response, on_done, on_stdout)
 	local op = response.op
 	if response.op ~= accept then
 		error(string.format('Invalid response to evaluation: %s', vim.inspect(response)))
@@ -149,7 +150,11 @@ function M.eval(response, on_done)
 		elseif op == print_repl then
 			local descr, data = response.descr, response.data
 			if descr == 'stdout' then
-				lib.place_text(data)
+				if on_stdout then
+					on_stdout(data)
+				else
+					lib.place_text(data)
+				end
 			end
 		elseif op == read_repl then
 			local pipe = response.pipe

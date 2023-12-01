@@ -72,7 +72,7 @@ There are a lot of niceties to add:
    - [X] Evaluate current symbol
    - [X] Evaluate current selection
    - [ ] Support visual block selection
-   - [ ] Include printed output in preview window
+   - [X] Include printed output in preview window
    - [ ] Handle errors
 - [ ] Cycle through history (e.g. up and down arrows); this is actually hard to
   achieve because Neovim does not let me overwrite just the user's input and
