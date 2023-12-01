@@ -121,7 +121,8 @@ end
 
 
 -- Evaluate a string of Fennel code.
-function M.eval(response)
+---@param on_done fun(values: string[]): any?  What to do with the result
+function M.eval(response, on_done)
 	local op = response.op
 	if response.op ~= accept then
 		error(string.format('Invalid response to evaluation: %s', vim.inspect(response)))
@@ -174,6 +175,9 @@ function M.eval(response)
 		op = response.op
 	end
 
+	if on_done then
+		return on_done(values)
+	end
 	lib.place_output(table.concat(values, '\t'))
 end
 

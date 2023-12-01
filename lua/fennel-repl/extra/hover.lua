@@ -34,6 +34,25 @@ local function get_word()
 	return success and #word > 0 and word or nil
 end
 
+---Helper function which gets the contents of the current selection.  Assumes
+---the user is in visual mode or Visual mode.
+---@return string text  Contents of the character- or linewise selection
+local function get_selection()
+	local p1, p2  = vim.fn.getcharpos('v'), vim.fn.getcharpos('.')
+	local r1, c1 = p1[2], p1[3]
+	local r2, c2 = p2[2], p2[3]
+	local start_row, start_col, end_row, end_col
+	if r1 < r2 or r1 == r2 and c1 < c2 then
+		start_row, end_row = r1, r2
+		start_col, end_col = c1, c2
+	else
+		start_row, end_row = r2, r1
+		start_col, end_col = c2, c1
+	end
+	local text = vim.api.nvim_buf_get_text(0, start_row - 1, start_col - 1, end_row - 1, end_col, {})
+	return vim.fn.join(text, '\n')
+end
+
 
 ---Open a floating preview window with contents.
 ---@param text string  The text to display
@@ -78,6 +97,32 @@ function M.doc()
 		cb.doc(response, function(values)
 			local text = values[1]
 			open_window(text)
+		end)
+	end)
+	vim.fn.chansend(jobid, {lib.format_message(msg), ''})
+end
+
+function M.eval()
+	local mode = vim.fn.mode()
+	local code
+	if mode == 'v' then
+		code = get_selection()
+	else
+		code = get_word()
+	end
+	if not code then return end
+
+	local jobid = vim.b.fennel_repl_jobid
+	if not jobid then return end
+	---@type Instance
+	local repl  = instances[jobid]
+	if not repl then return end
+	-- print('Code: ' .. code)
+
+	local msg = op.eval(code)
+	repl.callbacks[msg.id] = coroutine.create(function (response)
+		cb.eval(response, function (values)
+			open_window(table.concat(values, '\t'))
 		end)
 	end)
 	vim.fn.chansend(jobid, {lib.format_message(msg), ''})

@@ -68,7 +68,12 @@ There are a lot of niceties to add:
    - [ ] Include the type of the completion item (probably not useful with CMP
      because the type of an object does not map onto an LSP completion type)
 - [X] Documentation lookup (e.g. when pressing `K` while on a symbol)
-- [ ] Inspect an element (e.g. by pressing `<A-K>` while on a symbol)
+- [X] Evaluate an expression (e.g. by pressing `<A-K>` while on a symbol)
+   - [X] Evaluate current symbol
+   - [X] Evaluate current selection
+   - [ ] Support visual block selection
+   - [ ] Include printed output in preview window
+   - [ ] Handle errors
 - [ ] Cycle through history (e.g. up and down arrows); this is actually hard to
   achieve because Neovim does not let me overwrite just the user's input and
   messes up the state of the prompt buffer
