@@ -73,7 +73,7 @@ There are a lot of niceties to add:
    - [X] Evaluate current selection
    - [ ] Support visual block selection
    - [X] Include printed output in preview window
-   - [ ] Handle errors
+   - [X] Handle errors
 - [ ] Cycle through history (e.g. up and down arrows); this is actually hard to
   achieve because Neovim does not let me overwrite just the user's input and
   messes up the state of the prompt buffer

@@ -14,9 +14,9 @@ local lib       = require 'fennel-repl.lib'
 ---@type string[]
 local close_events = {'CursorMoved', 'CursorMovedI', 'InsertCharPre'}
 ---Maximum floating window width
-local max_width = 40
+local max_width = 80
 ---Maximum floating window height
-local max_height = 30
+local max_height = 60
 
 
 ---Focus ID shared among all hover windows in the Fennel REPL
@@ -56,7 +56,8 @@ end
 
 ---Open a floating preview window with contents.
 ---@param text string  The text to display
-local function open_window(text)
+---@param title (string|string[][])?  Optional window title
+local function open_window(text, title)
 	local lines = vim.fn.split(text, '\\\\n')
 	local width = 0
 	for _, line in ipairs(lines) do
@@ -65,6 +66,7 @@ local function open_window(text)
 	end
 
 	preview(lines, '', {
+		title = title,
 		width = width,
 		height = #lines,
 		max_width = max_width,
@@ -75,6 +77,13 @@ local function open_window(text)
 		focus = true,
 		border = 'single',
 	})
+end
+
+
+local function on_eval_error(type, data, traceback)
+	local title = string.format('%s error', type)
+	local text = string.format('%s\\n%s', data, traceback)
+	open_window(text, {{title, 'Error'}})
 end
 
 
@@ -138,9 +147,10 @@ function M.eval()
 	local collect_stdout = function(data)
 		table.insert(output, data)
 	end
+
 	local msg = op.eval(code)
 	repl.callbacks[msg.id] = coroutine.create(function (response)
-		cb.eval(response, on_done, collect_stdout)
+		cb.eval(response, on_done, collect_stdout, on_eval_error)
 	end)
 	vim.fn.chansend(jobid, {lib.format_message(msg), ''})
 end

@@ -37,17 +37,11 @@ local function switch_prompt(buffer, prompt)
 	fn.prompt_setprompt(buffer, prompt)
 end
 
-local function handle_incomplete_message(response)
+local function handle_incomplete_message(_response)
 	-- print('The line was incomplete')
 	-- The previous line still contains an empty line with the old buffer
 	switch_prompt(fn.bufnr(''), '.. ')
-	response = coroutine.yield()
-	local op = response.op
-	if op == done then
-		-- print 'Done'
-		return
-	end
-	error(string.format('Invalid response to evaluation: %s', vim.inspect(response)))
+	return coroutine.yield()
 end
 
 ---Handle an error response from the server.  Prints the error to the REPL
@@ -77,13 +71,7 @@ local function handle_error_response(response)
 			end
 		end
 	end
-	response = coroutine.yield()
-	local op = response.op
-	if op == done then
-		-- print 'Done'
-		return
-	end
-	error(string.format('Invalid response to evaluation: %s', vim.inspect(response)))
+	return coroutine.yield()
 end
 
 ---Fixed callback for the 'init' operation.  If there was an error initialising
@@ -120,10 +108,12 @@ function M.internal_error(response)
 end
 
 
--- Evaluate a string of Fennel code.
----@param on_done fun(values: string[]): any?  What to do with the result
+---Evaluate a string of Fennel code.
+---
+---@param on_done   fun(values: string[]): any?  What to do with the result
 ---@param on_stdout fun(data: string): any?  What to do with output to stdout
-function M.eval(response, on_done, on_stdout)
+---@param on_error  fun(type: string, data: string, traceback: string): any?  Handle error from REPL
+function M.eval(response, on_done, on_stdout, on_error)
 	local op = response.op
 	if response.op ~= accept then
 		error(string.format('Invalid response to evaluation: %s', vim.inspect(response)))
@@ -141,12 +131,23 @@ function M.eval(response, on_done, on_stdout)
 			-- print('An error')
 			local type, data = response.type, response.data
 			if type == 'parse' and data == 'incomplete message' then
-				handle_incomplete_message(response)
+				response = handle_incomplete_message(response)
 			else
 				instance.pending = nil
-				handle_error_response(response)
+				if on_error then
+					response = coroutine.yield(on_error(type, data, response.traceback))
+				else
+					response = handle_error_response(response)
+				end
 			end
-			return
+			-- Take over flow of logic from here; we expect the next response
+			-- to be final
+			op = response.op
+			if op == done then
+				-- print 'Done'
+				return
+			end
+			error(string.format('Invalid response to evaluation: %s', vim.inspect(response)))
 		elseif op == print_repl then
 			local descr, data = response.descr, response.data
 			if descr == 'stdout' then
