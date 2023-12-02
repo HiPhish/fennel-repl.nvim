@@ -55,10 +55,9 @@ end
 
 
 ---Open a floating preview window with contents.
----@param text string  The text to display
+---@param lines string[]  The text to display
 ---@param title (string|string[][])?  Optional window title
-local function open_window(text, title)
-	local lines = vim.fn.split(text, '\\\\n')
+local function open_window(lines, title)
 	local width = 0
 	for _, line in ipairs(lines) do
 		local n = vim.fn.strchars(line)
@@ -82,8 +81,16 @@ end
 
 local function on_eval_error(type, data, traceback)
 	local title = string.format('%s error', type)
-	local text = string.format('%s\\n%s', data, traceback)
-	open_window(text, {{title, 'Error'}})
+	local data_lines = vim.split(data, '\\n')
+	local   tb_lines = vim.split(traceback, '\\n')
+	local width = math.max(
+		vim.fn.reduce(vim.tbl_map(vim.fn.strchars, data_lines), math.max, 0),
+		vim.fn.reduce(vim.tbl_map(vim.fn.strchars, tb_lines),   math.max, 0))
+
+	table.insert(data_lines, vim.fn['repeat']('─', width))
+	vim.list_extend(data_lines, tb_lines)
+
+	open_window(data_lines, {{title, 'Error'}})
 end
 
 
@@ -104,8 +111,7 @@ function M.doc()
 	-- Fetch docstring from REPL and add it to the item
 	repl.callbacks[msg.id] = coroutine.create(function (response)
 		cb.doc(response, function(values)
-			local text = values[1]
-			open_window(text)
+			open_window(vim.split(values[1], '\\n'))
 		end)
 	end)
 	vim.fn.chansend(jobid, {lib.format_message(msg), ''})
@@ -134,14 +140,15 @@ function M.eval()
 
 	local on_done = function(values)
 		local text = table.concat(values, '\t')
+		local lines = vim.split(text, '\\n')
 		if #output > 0 then
-			local length = 0
-			for _, line in ipairs(output) do
-				length = math.max(length, vim.fn.strlen(line))
-			end
-			text = string.format('%s\\n%s\\n%s', text, vim.fn['repeat']('─', length), vim.fn.join(output, ''))
+			local width = math.max(
+				vim.fn.reduce(vim.tbl_map(vim.fn.strchars,  lines), math.max, 0),
+				vim.fn.reduce(vim.tbl_map(vim.fn.strchars, output), math.max, 0))
+			table.insert(lines, vim.fn['repeat']('─', width))
+			vim.list_extend(lines, output)
 		end
-		open_window(text)
+		open_window(lines)
 	end
 
 	local collect_stdout = function(data)
