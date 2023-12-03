@@ -2,6 +2,8 @@
 
 local lib = require 'fennel-repl.lib'
 
+vim.bo.expandtab = true
+
 -- Click tracebacks
 vim.keymap.set('n', 'gx', lib.follow_link, {
 	buffer = 0,

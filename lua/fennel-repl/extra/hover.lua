@@ -34,10 +34,11 @@ local function get_word()
 	return success and #word > 0 and word or nil
 end
 
----Helper function which gets the contents of the current selection.  Assumes
----the user is in visual mode or Visual mode.
----@return string text  Contents of the character- or linewise selection
-local function get_selection()
+---@return integer start_row
+---@return integer start_col
+---@return integer end_row
+---@return integer end_col
+local function visual_range()
 	local p1, p2  = vim.fn.getcharpos('v'), vim.fn.getcharpos('.')
 	local r1, c1 = p1[2], p1[3]
 	local r2, c2 = p2[2], p2[3]
@@ -49,10 +50,38 @@ local function get_selection()
 		start_row, end_row = r2, r1
 		start_col, end_col = c2, c1
 	end
+	return start_row, start_col, end_row, end_col
+end
+
+---Helper function which gets the contents of the current selection.  Assumes
+---the user is in visual mode or Visual mode.
+---@return string text  Contents of the character- or linewise selection
+local function get_selection()
+	local start_row, start_col, end_row, end_col = visual_range()
 	local text = vim.api.nvim_buf_get_text(0, start_row - 1, start_col - 1, end_row - 1, end_col, {})
 	return vim.fn.join(text, '\n')
 end
 
+---Helper function which gets the contents of the current block-wise selection.
+---Does not work well with tab characters because the "width" of a line is an
+---ambiguous concept.
+---@return string text  Contents of the character- or linewise selection
+local function get_block_selection()
+	local start_row, start_col, end_row
+	local end_col  ---@type integer?
+
+	start_row, start_col, end_row, end_col = visual_range()
+	local lines = vim.api.nvim_buf_get_lines(0, start_row - 1, end_row, false)
+	if end_col > vim.fn.strchars(vim.fn.getline(end_row + 1)) then
+		end_col = nil
+	end
+
+	local function clip_line(line)
+		return string.sub(line, start_col, end_col)
+	end
+	lines = vim.fn.map(lines, clip_line)
+	return vim.fn.join(lines, '\n')
+end
 
 ---Open a floating preview window with contents.
 ---@param lines string[]  The text to display
@@ -120,8 +149,12 @@ end
 function M.eval()
 	local mode = vim.fn.mode()
 	local code
-	if mode == 'v' then
+	if mode == 'v' or mode == 'V' then
 		code = get_selection()
+	elseif mode == '' then
+		-- Disabled because displaying the result is broken
+		return
+		-- code = get_block_selection()
 	else
 		code = get_word()
 	end
