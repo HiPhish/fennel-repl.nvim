@@ -3,11 +3,19 @@
 ---user is supposed to access them through mappings instead.
 local M = {}
 
-local preview   = vim.lsp.util.open_floating_preview
-local instances = require 'fennel-repl.instances'
-local op        = require 'fennel-repl.operation'
-local cb        = require 'fennel-repl.callback'
-local lib       = require 'fennel-repl.lib'
+local preview    = vim.lsp.util.open_floating_preview
+local getcharpos = vim.fn.getcharpos
+local join       = vim.fn.join
+local strchars   = vim.fn.strchars
+local chansend   = vim.fn.chansend
+local reduce     = vim.fn.reduce
+local srepeat    = vim.fn['repeat']
+local fn         = vim.fn
+local api        = vim.api
+local instances  = require 'fennel-repl.instances'
+local op         = require 'fennel-repl.operation'
+local cb         = require 'fennel-repl.callback'
+local lib        = require 'fennel-repl.lib'
 
 
 ---List of events which close the preview window
@@ -29,7 +37,7 @@ local focus_id = 'fennel_repl_hover_window'
 ---@return string? word  The word under the cursor if there is any
 local function get_word()
 	vim.opt.iskeyword:append {'.'}
-	local success, word = pcall(vim.fn.expand, '<cword>')
+	local success, word = pcall(fn.expand, '<cword>')
 	vim.opt.iskeyword:remove {'.'}
 	return success and #word > 0 and word or nil
 end
@@ -39,7 +47,7 @@ end
 ---@return integer end_row
 ---@return integer end_col
 local function visual_range()
-	local p1, p2  = vim.fn.getcharpos('v'), vim.fn.getcharpos('.')
+	local p1, p2  = getcharpos('v'), getcharpos('.')
 	local r1, c1 = p1[2], p1[3]
 	local r2, c2 = p2[2], p2[3]
 	local start_row, start_col, end_row, end_col
@@ -58,8 +66,8 @@ end
 ---@return string text  Contents of the character- or linewise selection
 local function get_selection()
 	local start_row, start_col, end_row, end_col = visual_range()
-	local text = vim.api.nvim_buf_get_text(0, start_row - 1, start_col - 1, end_row - 1, end_col, {})
-	return vim.fn.join(text, '\n')
+	local text = api.nvim_buf_get_text(0, start_row - 1, start_col - 1, end_row - 1, end_col, {})
+	return join(text, '\n')
 end
 
 ---Helper function which gets the contents of the current block-wise selection.
@@ -71,16 +79,16 @@ local function get_block_selection()
 	local end_col  ---@type integer?
 
 	start_row, start_col, end_row, end_col = visual_range()
-	local lines = vim.api.nvim_buf_get_lines(0, start_row - 1, end_row, false)
-	if end_col > vim.fn.strchars(vim.fn.getline(end_row + 1)) then
+	local lines = api.nvim_buf_get_lines(0, start_row - 1, end_row, false)
+	if end_col > strchars(fn.getline(end_row + 1)) then
 		end_col = nil
 	end
 
 	local function clip_line(line)
 		return string.sub(line, start_col, end_col)
 	end
-	lines = vim.fn.map(lines, clip_line)
-	return vim.fn.join(lines, '\n')
+	lines = fn.map(lines, clip_line)
+	return join(lines, '\n')
 end
 
 ---Open a floating preview window with contents.
@@ -89,7 +97,7 @@ end
 local function open_window(lines, title)
 	local width = 0
 	for _, line in ipairs(lines) do
-		local n = vim.fn.strchars(line)
+		local n = strchars(line)
 		if n > width then width = n end
 	end
 
@@ -113,10 +121,10 @@ local function on_eval_error(type, data, traceback)
 	local data_lines = vim.split(data, '\\n')
 	local   tb_lines = vim.split(traceback, '\\n')
 	local width = math.max(
-		vim.fn.reduce(vim.tbl_map(vim.fn.strchars, data_lines), math.max, 0),
-		vim.fn.reduce(vim.tbl_map(vim.fn.strchars, tb_lines),   math.max, 0))
+		reduce(vim.tbl_map(strchars, data_lines), math.max, 0),
+		reduce(vim.tbl_map(strchars, tb_lines),   math.max, 0))
 
-	table.insert(data_lines, vim.fn['repeat']('─', width))
+	table.insert(data_lines, srepeat('─', width))
 	vim.list_extend(data_lines, tb_lines)
 
 	open_window(data_lines, {{title, 'Error'}})
@@ -143,11 +151,11 @@ function M.doc()
 			open_window(vim.split(values[1], '\\n'))
 		end)
 	end)
-	vim.fn.chansend(jobid, {lib.format_message(msg), ''})
+	chansend(jobid, {lib.format_message(msg), ''})
 end
 
 function M.eval()
-	local mode = vim.fn.mode()
+	local mode = fn.mode()
 	local code
 	if mode == 'v' or mode == 'V' then
 		code = get_selection()
@@ -176,9 +184,9 @@ function M.eval()
 		local lines = vim.split(text, '\\n')
 		if #output > 0 then
 			local width = math.max(
-				vim.fn.reduce(vim.tbl_map(vim.fn.strchars,  lines), math.max, 0),
-				vim.fn.reduce(vim.tbl_map(vim.fn.strchars, output), math.max, 0))
-			table.insert(lines, vim.fn['repeat']('─', width))
+				reduce(vim.tbl_map(strchars,  lines), math.max, 0),
+				reduce(vim.tbl_map(strchars, output), math.max, 0))
+			table.insert(lines, srepeat('─', width))
 			vim.list_extend(lines, output)
 		end
 		open_window(lines)
@@ -192,7 +200,7 @@ function M.eval()
 	repl.callbacks[msg.id] = coroutine.create(function (response)
 		cb.eval(response, on_done, collect_stdout, on_eval_error)
 	end)
-	vim.fn.chansend(jobid, {lib.format_message(msg), ''})
+	chansend(jobid, {lib.format_message(msg), ''})
 end
 
 return M
