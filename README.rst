@@ -18,7 +18,30 @@ the application, evaluated, and the result is sent back to Neovim.
 Installation and setup
 ######################
 
-Requires Fennel 1.3.1 or higher.
+Requires Fennel 1.3.1 or higher running in the application you want to connect
+to.
+
+Install this plugin like any other Neovim plugin, then make sure the
+`_protocol` Git submodule has been initialised and checkout precisely to the
+version of this plugin.  The plugin communicates with the REPL process through
+a protocol, and the submodule ships an implementation of said protocol.
+Therefore it is important to keep the plugin and protocol implementation
+synchronised.
+
+If you were doing it by hand you would do execute these commands:
+
+.. code:: sh
+
+   git clone --recurse-submodules https://gitlab.com/HiPhish/fennel-repl.nvim.git
+
+To check out the correct version of the submodule:
+
+.. code:: sh
+
+   git submodule update --checkout _protocol
+
+If you are using a package manager please refer to its documentation on how to
+manage submodules.
 
 Installation
 ============
@@ -82,11 +105,11 @@ There are a lot of niceties to add:
 
 The following features are needed for a robust REPL experience:
 
-- [ ] Option to upgrade a REPL which does not follow the protocol; I will
+- [X] Option to upgrade a REPL which does not follow the protocol; I will
   probably have to ship the upgrade function with this plugin
-- [ ] Ability to strip off a prompt received from the server
-- [ ] Transmitting the formatting function to the server; JSON would be a good
+- [X] Transmitting the formatting function to the server; JSON would be a good
   choice because Neovim can decode it, but how do I teach the server JSON?
+- [ ] Ability to strip off a prompt received from the server
 
 
 License

@@ -77,11 +77,11 @@ function source:complete(_params, callback)
 	local repl  = instances[jobid]
 	local msg   = op.complete(input)
 
-	repl.callbacks[msg.id] = coroutine.create(function(response)
-		cb.complete(response, function(values)
-			callback(vim.tbl_map(value_to_item, values))
-		end)
+	local complete = coroutine.create(cb.complete)
+	coroutine.resume(complete, function (values)
+		callback(vim.tbl_map(value_to_item, values))
 	end)
+	repl.callbacks[msg.id] = complete
 
 	vim.fn.chansend(jobid, {lib.format_message(msg), ''})
 end
@@ -97,13 +97,13 @@ function source:resolve(item, callback)
 	local msg   = op.doc(sym)
 
 	-- Fetch docstring from REPL and add it to the item
-	repl.callbacks[msg.id] = coroutine.create(function (response)
-		cb.doc(response, function(values)
-			local text = values[1]
-			item.documentation = string.gsub(text, '\\n', '\n')
-			callback(item)
-		end)
+	local doc = coroutine.create(cb.doc)
+	coroutine.resume(doc, function(values)
+		local text = values[1]
+		item.documentation = string.gsub(text, '\\n', '\n')
+		callback(item)
 	end)
+	repl.callbacks[msg.id] = doc
 	vim.fn.chansend(jobid, {lib.format_message(msg), ''})
 
 	-- How can we get the type? It gets more complicated because the symbols we

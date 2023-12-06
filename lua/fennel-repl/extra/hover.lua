@@ -146,11 +146,11 @@ function M.doc()
 	local msg = op.doc(sym)
 
 	-- Fetch docstring from REPL and add it to the item
-	repl.callbacks[msg.id] = coroutine.create(function (response)
-		cb.doc(response, function(values)
-			open_window(vim.split(values[1], '\\n'))
-		end)
+	local callback = coroutine.create(cb.doc)
+	coroutine.resume(callback, function(values)
+		open_window(vim.split(values[1], '\\n'))
 	end)
+	repl.callbacks[msg.id] = callback
 	chansend(jobid, {lib.format_message(msg), ''})
 end
 
@@ -197,9 +197,9 @@ function M.eval()
 	end
 
 	local msg = op.eval(code)
-	repl.callbacks[msg.id] = coroutine.create(function (response)
-		cb.eval(response, on_done, collect_stdout, on_eval_error)
-	end)
+	local callback = coroutine.create(cb.eval)
+	coroutine.resume(callback, repl, on_done, collect_stdout, on_eval_error)
+	repl.callbacks[msg.id] = callback
 	chansend(jobid, {lib.format_message(msg), ''})
 end
 

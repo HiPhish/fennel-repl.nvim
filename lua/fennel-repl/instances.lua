@@ -19,8 +19,11 @@ local rb = require 'fennel-repl.ring-buffer'
 
 ---@class (exact) Instance
 ---Running instance of a Fennel REPL.
+---@field is_init   boolean  Whether the REPL has been initialised yet
 ---@field cmd       string   Command which started the Fennel process
----@field buffer    integer  Prompt buffer ID
+---@field args      string[] Command arguments
+---@field jobid     integer  Job ID of the REPL job
+---@field buffer    integer? Prompt buffer ID
 ---@field callbacks table    Pending coroutine callbacks
 ---@field pending   string?  Incomplete command fragments
 ---@field links     table<integer, Link>  Maps extmarks to file positions
@@ -32,13 +35,15 @@ local rb = require 'fennel-repl.ring-buffer'
 ---Sets up and registers a new REPL instance.
 ---@param jobid   integer  ID of the REPL process job
 ---@param command string   Command executed by the OS to launch the REPL
----@param buffer  integer  Buffer ID of the prompt buffer
+---@param args    string[] Command arguments
 ---@return Instance instance  The new REPL instance object.
-function M:new(jobid, command, buffer)
+function M:new(jobid, command, args)
 	---@type Instance
 	local instance = {
+		is_init = false,
 		cmd = command,
-		buffer = buffer,
+		args = args,
+		jobid = jobid,
 		-- Maps an ID to the corresponding callback function.  The callback will be
 		-- executed when a message with that ID arrives from the server.
 		callbacks = {},

@@ -1,11 +1,30 @@
 -- SPDX-License-Identifier: MIT
 
-local fn = vim.fn
-local nvim_buf_get_var     = vim.api.nvim_buf_get_var
-local nvim_buf_set_extmark = vim.api.nvim_buf_set_extmark
+local api = vim.api
+local fn  = vim.fn
+local nvim_buf_get_var     = api.nvim_buf_get_var
+local nvim_win_set_option  = api.nvim_win_set_option
+local nvim_buf_set_option  = api.nvim_buf_set_option
+local nvim_buf_set_var     = api.nvim_buf_set_var
+local nvim_buf_set_name    = api.nvim_buf_set_name
+local nvim_buf_set_extmark = api.nvim_buf_set_extmark
 local instances            = require 'fennel-repl.instances'
 local lib                  = require 'fennel-repl.lib'
 
+local op  = require 'fennel-repl.operation'
+
+---Collection of callback functions which we call when a response arrives.
+---Some of the callbacks take a number of arguments, these are usually provide
+---some initial information for the callback.  Subsequent resumes only accept a
+---response object.
+---
+---The common pattern is to first create a coroutine, then resume it
+---immediately with initial arguments.  The coroutine will yield as soon as it
+---needs a responses.  We then register the suspended coroutine.
+---
+---    local callback = coroutine.create(M.eval)
+---    coroutine.resume(callback, on_done, on_stdout, on_error)
+---    instance.callbacks[123] = callback
 local M = {}
 
 -- Operation identifiers, repeated here to avoid typos
@@ -13,7 +32,7 @@ local accept      = 'accept'
 local apropos     = 'apropos'
 local apropos_doc = 'apropos-doc'
 local compile     = 'compile'
-local complete    = 'compile'
+local complete    = 'complete'
 local doc         = 'doc'
 local done        = 'done'
 local error_repl  = 'error'
@@ -23,6 +42,54 @@ local print_repl  = 'print'
 local read_repl   = 'read'
 local reload      = 'reload'
 local reset       = 'reset'
+
+local BASE_PROMPT = '>> '
+local WELCOME_TEMPLATE = [[
+;; Welcome to Fennel %s on %s
+;; REPL protocol version %s
+;; Use ,help to see available commands]]
+
+---Map of comma-commands onto their callback functions.  The map will be filled
+---later after the functions have been defined.
+local comma_commands
+
+
+---Callback function for all Fennel prompts
+local function active_prompt_callback(text)
+	local jobid = nvim_buf_get_var(0, 'fennel_repl_jobid')
+	---@type Instance
+	local instance = instances[jobid]
+	local comma_command, comma_arg = string.match(text, '^%s*,(%S+)%s*(.*)')
+
+	local message, callback
+	if instance.pending then
+		instance.pending = instance.pending .. '\n' .. text
+		message = op.eval(instance.pending)
+		callback = coroutine.create(M.eval)
+		coroutine.resume(callback, instance)
+	elseif comma_command then
+		local comma_op = op.comma_ops[comma_command]
+		if not comma_op then
+			lib.place_error(string.format('Unknown command %s', comma_command))
+			return
+		end
+		message = comma_op(comma_arg)
+		callback = coroutine.create(comma_commands[comma_command])
+		-- Some comma commands need a first run with initial arguments
+		if comma_command == doc or comma_command == complete then
+			coroutine.resume(callback)
+		end
+	else
+		instance.pending = text
+		message = op.eval(instance.pending)
+		callback = coroutine.create(M.eval)
+		coroutine.resume(callback, instance)
+	end
+	instance.callbacks[message.id] = callback
+	instance.history:put(text)
+	print('Sending ' .. lib.format_message(message))
+	fn.chansend(jobid, {lib.format_message(message), ''})
+end
 
 ---Sets the prompt string of the prompt buffer, deletes the previous empty
 ---prompt line if there was any.  When we change the prompt there will be an
@@ -41,7 +108,8 @@ local function handle_incomplete_message(_response)
 	-- print('The line was incomplete')
 	-- The previous line still contains an empty line with the old buffer
 	switch_prompt(fn.bufnr(''), '.. ')
-	return coroutine.yield()
+	local _, response = coroutine.yield()
+	return response
 end
 
 ---Handle an error response from the server.  Prints the error to the REPL
@@ -71,26 +139,46 @@ local function handle_error_response(response)
 			end
 		end
 	end
-	return coroutine.yield()
+	_, response = coroutine.yield()
+	return response
 end
 
 ---Fixed callback for the 'init' operation.  If there was an error initialising
 ---the REPL it will be shut down.
-function M.init(msg)
+---@param instance Instance
+function M.init(instance)
+	local jobid = instance.jobid
+	local msg = coroutine.yield()
 	local status = msg.status
-	local jobid = nvim_buf_get_var(0, 'fennel_repl_jobid')
 
 	if status == done then
-		---@type Instance
-		local instance = instances[jobid]
 		local protocol, fennel, lua = msg.protocol, msg.fennel, msg.lua
+		instance.is_init  = true
 		instance.protocol = protocol
 		instance.fennel   = fennel
 		instance.lua      = lua
-		lib.place_comment(string.format([[
-;; Welcome to Fennel %s on %s
-;; REPL protocol version %s
-;; Use ,help to see available commands]], fennel, lua, protocol))
+
+		local buffer = api.nvim_create_buf(true, true)
+		do
+			nvim_buf_set_option(buffer, 'buftype', 'prompt')
+			nvim_buf_set_option(buffer, 'bufhidden', 'hide')
+			nvim_buf_set_option(buffer, 'buflisted', false)
+			nvim_buf_set_option(buffer, 'swapfile', false)
+			nvim_buf_set_option(buffer, 'filetype', 'fennel-repl')
+			nvim_buf_set_var(buffer, 'fennel_repl_jobid', jobid)
+			nvim_buf_set_name(buffer, string.format('Fennel REPL (%d)', jobid))
+			fn.prompt_setprompt(buffer, BASE_PROMPT)
+			fn.prompt_setcallback(buffer, active_prompt_callback)
+		end
+		instance.buffer = buffer
+
+		-- Open the REPL buffer in a new window
+		vim.cmd {cmd = 'sbuffer', args = {fn.string(buffer)}}
+		vim.cmd {cmd = 'setlocal', args = {'nospell'}}
+		vim.cmd 'startinsert'
+		nvim_win_set_option(0, 'number', false)
+
+		lib.place_comment(WELCOME_TEMPLATE:format(fennel, lua, protocol))
 	elseif status == error_repl then
 		local data = msg.data
 		fn.jobstop(jobid)
@@ -102,9 +190,7 @@ end
 ---an error message.
 function M.internal_error(response)
 	local type, data = response.type, response.data
-	lib.echo_error(string.format('Fennel REPL internal error: %s\n%s', type, data))
-	local jobid = nvim_buf_get_var(0, 'fennel_repl_jobid')
-	fn.jobstop(jobid)
+	lib.place_error(string.format('Fennel REPL internal error: %s\n%s', type, data))
 end
 
 
@@ -113,15 +199,13 @@ end
 ---@param on_done   fun(values: string[]): any?  What to do with the result
 ---@param on_stdout fun(data: string): any?  What to do with output to stdout
 ---@param on_error  fun(type: string, data: string, traceback: string): any?  Handle error from REPL
-function M.eval(response, on_done, on_stdout, on_error)
+function M.eval(instance, on_done, on_stdout, on_error)
+	local response = coroutine.yield()
 	local op = response.op
 	if response.op ~= accept then
 		error(string.format('Invalid response to evaluation: %s', vim.inspect(response)))
 	end
 
-	local jobid = nvim_buf_get_var(0, 'fennel_repl_jobid')
-	---@type Instance
-	local instance = instances[jobid]
 	local values = {}
 
 	response = coroutine.yield()
@@ -189,7 +273,8 @@ end
 
 ---complete: produce all possible completions for a given input symbol.
 ---@param on_done fun(values: string[]): any?  What to do with the result
-function M.complete(response, on_done)
+function M.complete(on_done)
+	local response = coroutine.yield()
 	local op = response.op
 	if op ~= accept then
 		-- TODO: Handle error
@@ -214,7 +299,8 @@ end
 
 -- Produce documentation of a symbol.
 ---@param on_done fun(values: string[]): any?  What to do with the result
-function M.doc(response, on_done)
+function M.doc(on_done)
+	local response = coroutine.yield()
 	local op = response.op
 	if op ~= accept then
 		error(string.format('Invalid response to evaluation: %s', vim.inspect(response)))
@@ -359,7 +445,7 @@ function M.apropos_doc(response)
 end
 
 -- Produce all documentation matching a pattern in the function name.
-function M.apropos_show_docs(response)
+function M.apropos_show_docs(_response)
 	-- TODO
 	-- This appear to be broken in Fennel in general
 	-- https://github.com/bakpakin/Fennel/issues/463
@@ -430,7 +516,7 @@ function M.nop(_response)
 	-- Intentionally empty.
 end
 
-M.comma_commands = {
+comma_commands = {
 	complete              = M.complete,
 	doc                   = M.doc,
 	reload                = M.reload,
