@@ -6,9 +6,14 @@ runtime! syntax/fennel.lua
 syntax match fennelReplPrompt /^>> /
 syntax match fennelReplPrompt /^\.\. /
 
-syntax match fennelReplCommand /,\w\+/
+" ,apropos-doc
+syntax match fennelReplCommand /,\(\k\|-\)\+/
+
+" #<function: builtin#123>
 syntax match fennelReplFunctionRep /#<function: builtin#\d\+>/
+" #<function: 0x123deadbeef>
 syntax match fennelReplFunctionRep /#<function: 0x\d\+>/
+
 
 " Link the special REPL highlight groups to default highlight groups
 highlight default link fennelReplComment      Comment
