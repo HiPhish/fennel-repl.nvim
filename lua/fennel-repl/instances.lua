@@ -9,7 +9,13 @@ local M = {
 	count = 0,
 }
 
-local rb = require 'fennel-repl.ring-buffer'
+local api = vim.api
+local fn  = vim.fn
+local rb  = require 'fennel-repl.ring-buffer'
+local lib = require 'fennel-repl.lib'
+
+local nvim_buf_add_highlight = api.nvim_buf_add_highlight
+local nvim_buf_line_count    = api.nvim_buf_line_count
 
 
 ---@class (exact) Link
@@ -31,6 +37,56 @@ local rb = require 'fennel-repl.ring-buffer'
 ---@field protocol  string?  Protocol version in use
 ---@field fennel    string?  Running Fennel version
 ---@field lua       string?  Running Lua version
+---@field place_value   fun(self: Instance, text: string): nil
+---@field place_comment fun(self: Instance, text: string): nil
+---@field place_output  fun(self: Instance, text: string): nil
+---@field place_error   fun(self: Instance, text: string): nil
+
+
+---@param instance Instance
+---@param text     string
+---@param hlgroup  string?
+local function place_text(instance, text, hlgroup)
+	local buffer = instance.buffer
+	local start_line = nvim_buf_line_count(buffer) - 2
+	for i, line in ipairs(fn.split(lib.unescape(text), '\n')) do
+		local linenr = start_line + i
+		fn.append(linenr, line)
+		if hlgroup then
+			nvim_buf_add_highlight(0, -1, hlgroup, linenr, 0, -1)
+		end
+	end
+end
+
+---Place text output in the REPL buffer
+---@param self Instance
+---@param text string
+local function place_output(self, text)
+	place_text(self, text, 'fennelReplStdout')
+end
+
+
+---Place an evaluation result in the REPL buffer.
+---@param self Instance
+---@param text string
+local function place_value(self, text)
+	place_text(self, text, 'fennelReplValue')
+end
+
+---Place a comment in the REPL buffer
+---@param self Instance
+---@param text string
+local function place_comment(self, text)
+	place_text(self, text, 'fennelReplComment')
+end
+
+---Place an error message in the REPL buffer
+---@param self Instance
+---@param text string
+local function place_error(self, text)
+	place_text(self, text, 'fennelReplError')
+end
+
 
 ---Sets up and registers a new REPL instance.
 ---@param jobid   integer  ID of the REPL process job
@@ -58,6 +114,11 @@ function M:new(jobid, command, args)
 		links = {},
 		---Ring buffer of previous messages sent to the server.
 		history = rb.new(3),
+
+		place_value   = place_value,
+		place_comment = place_comment,
+		place_output  = place_output,
+		place_error   = place_error,
 	}
 	self[jobid] = instance
 	self.count = self.count + 1

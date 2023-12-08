@@ -1,4 +1,5 @@
 -- SPDX-License-Identifier: MIT
+
 local api = vim.api
 local fn  = vim.fn
 local nvim_buf_set_option = api.nvim_buf_set_option
@@ -68,8 +69,10 @@ local function on_stderr(_job_id, data, _name)
 end
 
 local function on_exit(job_id, exit_code, _event)
-	local buffer = instances[job_id].buffer
-	lib.place_comment((';; Fennel terminated with exit code %d'):format(exit_code))
+	---@type Instance
+	local instance = instances[job_id]
+	instance:place_comment((';; Fennel terminated with exit code %d'):format(exit_code))
+	local buffer = instance.buffer
 	fn.prompt_setprompt(buffer, '')
 	instances:drop(nvim_buf_get_var(0, 'fennel_repl_jobid'))
 	fn.prompt_setcallback(buffer, dead_prompt_callback)
@@ -102,7 +105,8 @@ local function repl_start(args)
 	-- Could this be a problem if the message has already arrived?
 	instance.callbacks[ 0] = coroutine.create(cb.init)
 	instance.callbacks[-1] = coroutine.create(cb.internal_error)
-	coroutine.resume(instance.callbacks[0], instance)
+	coroutine.resume(instance.callbacks[ 0], instance)
+	coroutine.resume(instance.callbacks[-1], instance)
 
 	-- Upgrade the REPL
 	-- NOTE: Love2D cannot handle line breaks in the expression

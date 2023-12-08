@@ -1,11 +1,11 @@
 -- SPDX-License-Identifier: MIT
 
-local lib = require 'fennel-repl.lib'
+local xref = require 'fennel-repl.extra.xref'
 
 vim.bo.expandtab = true
 
 -- Click tracebacks
-vim.keymap.set('n', 'gx', lib.follow_link, {
+vim.keymap.set('n', 'gx', xref.follow, {
 	buffer = 0,
 	noremap = true,
 	desc = 'Follow a link under the cursor',
