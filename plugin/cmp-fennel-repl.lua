@@ -1,3 +1,5 @@
+-- SPDX-License-Identifier: MIT
+
 -- We request completion from the REPL through a request.  This request
 -- contains the fully qualified name of the text, such as 'string.fo' for the
 -- function 'string.format'.  The text to sent to the REPL is the current word

@@ -1,3 +1,5 @@
+-- SPDX-License-Identifier: MIT
+
 ---Convenient high-level REPL features.  These build on top of the primitives
 ---from lover-level modules and are not provided to the user directly.  The
 ---user is supposed to access them through mappings instead.

@@ -1,3 +1,5 @@
+-- SPDX-License-Identifier: MIT
+
 ---Functions for dealing with cross-references
 local M = {}
 

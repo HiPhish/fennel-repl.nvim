@@ -1,3 +1,5 @@
+-- SPDX-License-Identifier: MIT
+
 local hover = require 'fennel-repl.extra.hover'
 
 local doc  = hover.doc
