@@ -53,3 +53,16 @@ implementation must handle its own arguments.  This includes things like the
       local launch_args = vim.fn.extendnew({'launch', '--', 'love', '.'}, args)
       fennel_repl.subcommands['launch'](launch_args)
    end
+
+
+An abstract kind of REPL
+########################
+
+At the moment we assume that the REPL runs in a separate process.  But what if
+we want to connect to the Lua VM running right here in the current Neovim
+process?  We would need a different kind of REPL.
+
+I propose creating an abstract "REPL" class protocol which can be implemented
+by concrete REPL classes.  The current REPL class could then become
+`remote_repl` and a REPL that talks directly to Neovim would become
+`nvim_repl`.
