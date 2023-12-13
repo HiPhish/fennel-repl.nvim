@@ -7,7 +7,6 @@ local preview    = vim.lsp.util.open_floating_preview
 local getcharpos = vim.fn.getcharpos
 local join       = vim.fn.join
 local strchars   = vim.fn.strchars
-local chansend   = vim.fn.chansend
 local reduce     = vim.fn.reduce
 local srepeat    = vim.fn['repeat']
 local fn         = vim.fn
@@ -15,7 +14,6 @@ local api        = vim.api
 local instances  = require 'fennel-repl.instances'
 local op         = require 'fennel-repl.operation'
 local cb         = require 'fennel-repl.callback'
-local lib        = require 'fennel-repl.lib'
 
 
 ---List of events which close the preview window
@@ -146,12 +144,10 @@ function M.doc()
 	local msg = op.doc(sym)
 
 	-- Fetch docstring from REPL and add it to the item
-	local callback = coroutine.create(cb.doc)
-	coroutine.resume(callback, function(values)
+	local display_doc = function(values)
 		open_window(vim.split(values[1], '\\n'))
-	end)
-	repl.callbacks[msg.id] = callback
-	chansend(jobid, {lib.format_message(msg), ''})
+	end
+	repl:send_message(op.doc(sym), cb.doc, display_doc)
 end
 
 function M.eval()
@@ -196,11 +192,7 @@ function M.eval()
 		table.insert(output, data)
 	end
 
-	local msg = op.eval(code)
-	local callback = coroutine.create(cb.eval)
-	coroutine.resume(callback, repl, on_done, collect_stdout, on_eval_error)
-	repl.callbacks[msg.id] = callback
-	chansend(jobid, {lib.format_message(msg), ''})
+	repl:send_message(op.eval(code), cb.eval, on_done, collect_stdout, on_eval_error)
 end
 
 return M

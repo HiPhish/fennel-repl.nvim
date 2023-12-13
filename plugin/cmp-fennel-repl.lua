@@ -10,7 +10,6 @@ local has_cmp, cmp = pcall(require, 'cmp')
 if not has_cmp then return end
 
 local instances = require 'fennel-repl.instances'
-local lib       = require 'fennel-repl.lib'
 local op        = require 'fennel-repl.operation'
 local cb        = require 'fennel-repl.callback'
 
@@ -77,13 +76,10 @@ function source:complete(_params, callback)
 	local repl  = instances[jobid]
 	local msg   = op.complete(input)
 
-	local complete = coroutine.create(cb.complete)
-	coroutine.resume(complete, function (values)
+	local function process_completion(values)
 		callback(vim.tbl_map(value_to_item, values))
-	end)
-	repl.callbacks[msg.id] = complete
-
-	vim.fn.chansend(jobid, {lib.format_message(msg), ''})
+	end
+	repl:send_message(msg, cb.complete, process_completion)
 end
 
 ---Enrich the completion item with additional data from the REPL.  This is not
@@ -97,14 +93,12 @@ function source:resolve(item, callback)
 	local msg   = op.doc(sym)
 
 	-- Fetch docstring from REPL and add it to the item
-	local doc = coroutine.create(cb.doc)
-	coroutine.resume(doc, function(values)
+	local function apply_doc(values)
 		local text = values[1]
 		item.documentation = string.gsub(text, '\\n', '\n')
 		callback(item)
-	end)
-	repl.callbacks[msg.id] = doc
-	vim.fn.chansend(jobid, {lib.format_message(msg), ''})
+	end
+	repl:send_message(msg, cb.doc, apply_doc)
 
 	-- How can we get the type? It gets more complicated because the symbols we
 	-- get back might be special forms like 'set' which we cannot pass to the

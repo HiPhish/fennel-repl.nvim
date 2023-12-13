@@ -65,8 +65,7 @@ local function active_prompt_callback(text)
 	if instance.pending then
 		instance.pending = instance.pending .. '\n' .. text
 		message = op.eval(instance.pending)
-		callback = coroutine.create(M.eval)
-		coroutine.resume(callback, instance)
+		callback = M.eval
 	elseif comma_command then
 		local comma_op = op.comma_ops[comma_command]
 		if not comma_op then
@@ -74,19 +73,16 @@ local function active_prompt_callback(text)
 			return
 		end
 		message = comma_op(comma_arg)
-		callback = coroutine.create(comma_commands[comma_command])
-		-- Comma commands need a first run with initial arguments
-		coroutine.resume(callback, instance)
+		callback = comma_commands[comma_command]
 	else
 		instance.pending = text
 		message = op.eval(instance.pending)
-		callback = coroutine.create(M.eval)
-		coroutine.resume(callback, instance)
+		callback = M.eval
 	end
 	instance.callbacks[message.id] = callback
 	instance.history:put(text)
 	print('Sending ' .. lib.format_message(message))
-	fn.chansend(jobid, {lib.format_message(message), ''})
+	instance:send_message(message, callback)
 end
 
 ---Sets the prompt string of the prompt buffer, deletes the previous empty

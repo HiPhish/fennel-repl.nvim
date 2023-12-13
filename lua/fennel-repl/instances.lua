@@ -16,6 +16,7 @@ local lib = require 'fennel-repl.lib'
 
 local nvim_buf_add_highlight = api.nvim_buf_add_highlight
 local nvim_buf_line_count    = api.nvim_buf_line_count
+local chansend = fn.chansend
 
 
 ---@class (exact) Link
@@ -41,6 +42,8 @@ local nvim_buf_line_count    = api.nvim_buf_line_count
 ---@field place_comment fun(self: Instance, text: string): nil
 ---@field place_output  fun(self: Instance, text: string): nil
 ---@field place_error   fun(self: Instance, text: string): nil
+---Send a message to the REPL
+---@field send_message  fun(self: Instance, msg: table, cb: function, ...): nil
 
 
 ---@param instance Instance
@@ -87,6 +90,18 @@ local function place_error(self, text)
 	place_text(self, text, 'fennelReplError')
 end
 
+---Send a message to the REPL
+---@param self Instance
+---@param msg      table     The message object to send
+---@param callback function  Callback function, will be wrapped in a coroutine
+---@param ...      any       Initial arguments to callback
+local function send_message(self, msg, callback, ...)
+	local coro = coroutine.create(callback)
+	coroutine.resume(coro, self, ...)
+	self.callbacks[msg.id] = coro
+	chansend(self.jobid, {lib.format_message(msg), ''})
+end
+
 
 ---Sets up and registers a new REPL instance.
 ---@param jobid   integer  ID of the REPL process job
@@ -119,6 +134,8 @@ function M:new(jobid, command, args)
 		place_comment = place_comment,
 		place_output  = place_output,
 		place_error   = place_error,
+
+		send_message = send_message,
 	}
 	self[jobid] = instance
 	self.count = self.count + 1
