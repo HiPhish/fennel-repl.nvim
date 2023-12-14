@@ -1,9 +1,12 @@
 -- SPDX-License-Identifier: MIT
 
-local hover = require 'fennel-repl.extra.hover'
+local hover = require  'fennel-repl.extra.hover'
+local buffer = require 'fennel-repl.extra.buffer'
 
-local doc  = hover.doc
-local eval = hover.eval
+local doc   = hover.doc
+local eval  = hover.eval
+local beval = buffer.eval_toplevel
+local eeval = buffer.eval_expr
 
 vim.keymap.set('n', '<Plug>(FennelReplDoc)', doc, {
 	noremap = true,
@@ -13,4 +16,14 @@ vim.keymap.set('n', '<Plug>(FennelReplDoc)', doc, {
 vim.keymap.set({'n', 'v'}, '<Plug>(FennelReplEval)', eval, {
 	noremap = true,
 	desc = 'Show evaluation result of expression under the cursor; will perform side effects',
+})
+
+vim.keymap.set('n', '<Plug>(FennelReplBufferToplevelEval)', beval, {
+	noremap = true,
+	desc = 'Evaluate the toplevel expression under the cursor',
+})
+
+vim.keymap.set('n', '<Plug>(FennelReplBufferExprEval)', eeval, {
+	noremap = true,
+	desc = 'Evaluate the expression under the cursor',
 })

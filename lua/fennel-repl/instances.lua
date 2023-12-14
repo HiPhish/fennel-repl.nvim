@@ -46,6 +46,11 @@ local chansend = fn.chansend
 ---@field send_message  fun(self: Instance, msg: table, cb: function, ...): nil
 
 
+---Stack of active REPL job IDs.  The last entry is most recent.
+---@type integer[]
+local stack = {}
+
+
 ---@param instance Instance
 ---@param text     string
 ---@param hlgroup  string?
@@ -54,9 +59,11 @@ local function place_text(instance, text, hlgroup)
 	local start_line = nvim_buf_line_count(buffer) - 2
 	for i, line in ipairs(fn.split(lib.unescape(text), '\n')) do
 		local linenr = start_line + i
-		fn.append(linenr, line)
+		api.nvim_buf_call(buffer, function()
+			fn.append(linenr, line)
+		end)
 		if hlgroup then
-			nvim_buf_add_highlight(0, -1, hlgroup, linenr, 0, -1)
+			nvim_buf_add_highlight(buffer, -1, hlgroup, linenr, 0, -1)
 		end
 	end
 end
@@ -139,14 +146,31 @@ function M:new(jobid, command, args)
 	}
 	self[jobid] = instance
 	self.count = self.count + 1
+	table.insert(stack, jobid)
 	return instance
 end
 
 ---Unregisters a REPL instance.
 ---@param jobid integer  ID of the REPL process job
-function M:drop(jobid)
-	self[jobid] = nil
-	self.count = self.count - 1
+function M.drop(jobid)
+	M[jobid] = nil
+	for i, other_id in ipairs(stack) do
+		if other_id == jobid then
+			table.remove(stack, i)
+			break
+		end
+	end
+	M.count = M.count - 1
+end
+
+---Returns the last REPL started, if any.
+---@return Instance?
+function M.get_topmost()
+	local job_id = stack[#stack]
+	if not job_id then
+		return nil
+	end
+	return M[job_id]
 end
 
 return M

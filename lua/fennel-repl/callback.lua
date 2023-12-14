@@ -251,7 +251,7 @@ function M.eval(instance, on_done, on_stdout, on_error)
 			end)
 		elseif op == eval then
 			instance.pending = nil
-			switch_prompt(vim.fn.bufnr(''), '>> ')
+			switch_prompt(instance.buffer, '>> ')
 			values = fn.extend(values, response.values)
 		else
 			print 'An unexpected error occurred'
@@ -501,7 +501,7 @@ function M.reset(instance)
 end
 
 -- Leave the REPL.
-function M.exit(_instance)
+function M.exit(instance)
 	local response = coroutine.yield()
 	local op = response.op
 	if op ~= accept then
@@ -513,8 +513,7 @@ function M.exit(_instance)
 	if op ~= done then
 		-- TODO: handle error
 	end
-	local jobid = nvim_buf_get_var(0, 'fennel_repl_jobid')
-	fn.jobstop(jobid)
+	fn.jobstop(instance.jobid)
 end
 
 -- Ignore the operation.
