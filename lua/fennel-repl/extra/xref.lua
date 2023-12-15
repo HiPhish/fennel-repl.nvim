@@ -14,13 +14,13 @@ local nvim_win_set_cursor = vim.api.nvim_win_set_cursor
 ---traceback messages to jump to the indicated file and line.  If there already
 ---is a window open we jump to it, otherwise we open a new window.
 function M.follow()
-	local instance = instances[nvim_buf_get_var(0, 'fennel_repl_jobid')]
+	local repl = instances[nvim_buf_get_var(0, 'fennel_repl_jobid')]
 	local file, lnum
 
 	-- Try to find an extmark at the cursor position
 	for _, info in ipairs(vim.inspect_pos().extmarks) do
 		if info.ns_id == M.namespace then
-			local link = instance.links[info.id]
+			local link = repl.links[info.id]
 			if link then
 				file = link.file
 				lnum = link.lnum

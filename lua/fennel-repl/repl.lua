@@ -39,11 +39,11 @@ local chansend = fn.chansend
 ---@field send_message  fun(self: FennelRepl, msg: table, cb: function, ...): nil
 
 
----@param instance FennelRepl
+---@param self     FennelRepl
 ---@param text     string
 ---@param hlgroup  string?
-local function place_text(instance, text, hlgroup)
-	local buffer = instance.buffer
+local function place_text(self, text, hlgroup)
+	local buffer = self.buffer
 	local start_line = nvim_buf_line_count(buffer) - 2
 	for i, line in ipairs(fn.split(lib.unescape(text), '\n')) do
 		local linenr = start_line + i
@@ -100,7 +100,7 @@ end
 ---@return FennelRepl
 function M.new(jobid, command, args)
 	---@type FennelRepl
-	local instance = {
+	local result = {
 		is_init = false,
 		cmd = command,
 		args = args,
@@ -127,7 +127,7 @@ function M.new(jobid, command, args)
 
 		send_message = send_message,
 	}
-	return instance
+	return result
 end
 
 return M

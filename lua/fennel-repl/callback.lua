@@ -24,7 +24,7 @@ local op  = require 'fennel-repl.operation'
 ---
 ---    local callback = coroutine.create(M.eval)
 ---    coroutine.resume(callback, on_done, on_stdout, on_error)
----    instance.callbacks[123] = callback
+---    repl.callbacks[123] = callback
 local M = {}
 
 -- Operation identifiers, repeated here to avoid typos
@@ -58,31 +58,31 @@ local comma_commands
 local function active_prompt_callback(text)
 	local jobid = nvim_buf_get_var(0, 'fennel_repl_jobid')
 	---@type FennelRepl
-	local instance = instances[jobid]
+	local repl = instances[jobid]
 	local comma_command, comma_arg = string.match(text, '^%s*,(%S+)%s*(.*)')
 
 	local message, callback
-	if instance.pending then
-		instance.pending = instance.pending .. '\n' .. text
-		message = op.eval(instance.pending)
+	if repl.pending then
+		repl.pending = repl.pending .. '\n' .. text
+		message = op.eval(repl.pending)
 		callback = M.eval
 	elseif comma_command then
 		local comma_op = op.comma_ops[comma_command]
 		if not comma_op then
-			instance:place_error(string.format('Unknown command %s', comma_command))
+			repl:place_error(string.format('Unknown command %s', comma_command))
 			return
 		end
 		message = comma_op(comma_arg)
 		callback = comma_commands[comma_command]
 	else
-		instance.pending = text
-		message = op.eval(instance.pending)
+		repl.pending = text
+		message = op.eval(repl.pending)
 		callback = M.eval
 	end
-	instance.callbacks[message.id] = callback
-	instance.history:put(text)
+	repl.callbacks[message.id] = callback
+	repl.history:put(text)
 	print('Sending ' .. lib.format_message(message))
-	instance:send_message(message, callback)
+	repl:send_message(message, callback)
 end
 
 ---Sets the prompt string of the prompt buffer, deletes the previous empty
@@ -108,18 +108,16 @@ end
 
 ---Handle an error response from the server.  Prints the error to the REPL
 ---output and parses the traceback (if it exists).
----@param instance FennelRepl
-local function handle_error_response(instance, response)
+---@param repl FennelRepl
+local function handle_error_response(repl, response)
 	local type, data, traceback = response.type, response.data, response.traceback
-	instance:place_error(string.format('%s error: %s', type, data))
+	repl:place_error(string.format('%s error: %s', type, data))
 	-- Display the traceback
 	if traceback then
-		---@type FennelRepl
-		local instance = instances[nvim_buf_get_var(0, 'fennel_repl_jobid')]
 		-- We have to manually break up the traceback so we can parse each line
 		-- individually
 		for _, tb_line in ipairs(fn.split(lib.unescape(traceback), '\n')) do
-			instance:place_error(tb_line)
+			repl:place_error(tb_line)
 			-- Not every line points to a file location
 			local start, stop, file, pos = tb_line:find('(%S+):(%d+):')
 			if start then
@@ -130,7 +128,7 @@ local function handle_error_response(instance, response)
 					hl_mode = 'combine',
 				}
 				local extmark = nvim_buf_set_extmark(0, lib.namespace, lnum, start - 1, opts)
-				instance.links[extmark] = {file = file, lnum = tonumber(pos)}
+				repl.links[extmark] = {file = file, lnum = tonumber(pos)}
 			end
 		end
 	end
@@ -140,18 +138,18 @@ end
 
 ---Fixed callback for the 'init' operation.  If there was an error initialising
 ---the REPL it will be shut down.
----@param instance FennelRepl
-function M.init(instance)
-	local jobid = instance.jobid
+---@param repl FennelRepl
+function M.init(repl)
+	local jobid = repl.jobid
 	local msg = coroutine.yield()
 	local status = msg.status
 
 	if status == done then
 		local protocol, fennel, lua = msg.protocol, msg.fennel, msg.lua
-		instance.is_init  = true
-		instance.protocol = protocol
-		instance.fennel   = fennel
-		instance.lua      = lua
+		repl.is_init  = true
+		repl.protocol = protocol
+		repl.fennel   = fennel
+		repl.lua      = lua
 
 		local buffer = api.nvim_create_buf(true, true)
 		do
@@ -165,7 +163,7 @@ function M.init(instance)
 			fn.prompt_setprompt(buffer, BASE_PROMPT)
 			fn.prompt_setcallback(buffer, active_prompt_callback)
 		end
-		instance.buffer = buffer
+		repl.buffer = buffer
 
 		-- Open the REPL buffer in a new window
 		vim.cmd {cmd = 'sbuffer', args = {fn.string(buffer)}}
@@ -173,7 +171,7 @@ function M.init(instance)
 		vim.cmd 'startinsert'
 		nvim_win_set_option(0, 'number', false)
 
-		instance:place_comment(WELCOME_TEMPLATE:format(fennel, lua, protocol))
+		repl:place_comment(WELCOME_TEMPLATE:format(fennel, lua, protocol))
 	elseif status == error_repl then
 		local data = msg.data
 		fn.jobstop(jobid)
@@ -183,10 +181,10 @@ end
 
 ---An internal error we cannot recover from.  Just shut down the REPL and show
 ---an error message.
-function M.internal_error(instance)
+function M.internal_error(repl)
 	local response = coroutine.yield()
 	local type, data = response.type, response.data
-	instance:place_error(string.format('Fennel REPL internal error: %s\n%s', type, data))
+	repl:place_error(string.format('Fennel REPL internal error: %s\n%s', type, data))
 end
 
 
@@ -195,7 +193,7 @@ end
 ---@param on_done   fun(values: string[]): any?  What to do with the result
 ---@param on_stdout fun(data: string): any?  What to do with output to stdout
 ---@param on_error  fun(type: string, data: string, traceback: string): any?  Handle error from REPL
-function M.eval(instance, on_done, on_stdout, on_error)
+function M.eval(repl, on_done, on_stdout, on_error)
 	local response = coroutine.yield()
 	local op = response.op
 	if response.op ~= accept then
@@ -213,11 +211,11 @@ function M.eval(instance, on_done, on_stdout, on_error)
 			if type == 'parse' and data == 'incomplete message' then
 				response = handle_incomplete_message(response)
 			else
-				instance.pending = nil
+				repl.pending = nil
 				if on_error then
 					response = coroutine.yield(on_error(type, data, response.traceback))
 				else
-					response = handle_error_response(instance, response)
+					response = handle_error_response(repl, response)
 				end
 			end
 			-- Take over flow of logic from here; we expect the next response
@@ -234,7 +232,7 @@ function M.eval(instance, on_done, on_stdout, on_error)
 				if on_stdout then
 					on_stdout(data)
 				else
-					instance:place_output(data)
+					repl:place_output(data)
 				end
 			end
 		elseif op == read_repl then
@@ -250,8 +248,8 @@ function M.eval(instance, on_done, on_stdout, on_error)
 				end
 			end)
 		elseif op == eval then
-			instance.pending = nil
-			switch_prompt(instance.buffer, '>> ')
+			repl.pending = nil
+			switch_prompt(repl.buffer, '>> ')
 			values = fn.extend(values, response.values)
 		else
 			print 'An unexpected error occurred'
@@ -264,12 +262,12 @@ function M.eval(instance, on_done, on_stdout, on_error)
 	if on_done then
 		return on_done(values)
 	end
-	instance:place_value(table.concat(values, '\t'))
+	repl:place_value(table.concat(values, '\t'))
 end
 
 ---complete: produce all possible completions for a given input symbol.
 ---@param on_done fun(values: string[]): any?  What to do with the result
-function M.complete(instance, on_done)
+function M.complete(repl, on_done)
 	local response = coroutine.yield()
 	local op = response.op
 	if op ~= accept then
@@ -289,13 +287,13 @@ function M.complete(instance, on_done)
 	if on_done then
 		return on_done(values)
 	end
-	instance:place_output(table.concat(values, '\t'))
+	repl:place_output(table.concat(values, '\t'))
 end
 
 
 -- Produce documentation of a symbol.
 ---@param on_done fun(values: string[]): any?  What to do with the result
-function M.doc(instance, on_done)
+function M.doc(repl, on_done)
 	local response = coroutine.yield()
 	local op = response.op
 	if op ~= accept then
@@ -315,13 +313,13 @@ function M.doc(instance, on_done)
 	if on_done then
 		return on_done(values)
 	end
-	instance:place_output(table.concat(values, '\t'))
+	repl:place_output(table.concat(values, '\t'))
 end
 
 ---Reload the module.
----@param instance  FennelRepl
+---@param repl  FennelRepl
 ---@param on_done   (fun(values: string[]): any)?
-function M.reload(instance, on_done)
+function M.reload(repl, on_done)
 	local response = coroutine.yield()
 	local op = response.op
 	if op ~= accept then
@@ -332,8 +330,8 @@ function M.reload(instance, on_done)
 	if op == error_repl then
 		local data, traceback = response.data, response.traceback
 		coroutine.yield()  -- So we can receive the 'done' instruction
-		instance:place_error(data)
-		instance:place_error(traceback)
+		repl:place_error(data)
+		repl:place_error(traceback)
 	elseif op ~= reload then
 		-- TODO: handle error
 	end
@@ -346,11 +344,11 @@ function M.reload(instance, on_done)
 	if on_done then
 		return on_done(values)
 	end
-	instance:place_output(table.concat(values, '\t'))
+	repl:place_output(table.concat(values, '\t'))
 end
 
 -- Print the filename and line number for a given function.
-function M.find(instance)
+function M.find(repl)
 	local response = coroutine.yield()
 	local op = response.op
 	if op ~= accept then
@@ -361,7 +359,7 @@ function M.find(instance)
 	if op == error_repl then
 		if response.type == 'repl' then
 			coroutine.yield()  -- So we can receive the 'done' instruction
-		instance:place_error(response.data)
+		repl:place_error(response.data)
 			return
 		end
 		-- TODO: handle error
@@ -376,11 +374,11 @@ function M.find(instance)
 	if op ~= done then
 		-- TODO: handle error
 	end
-	instance:place_output(table.concat(values, '\t'))
+	repl:place_output(table.concat(values, '\t'))
 end
 
 -- Compiles the expression into Lua and returns the result.
-function M.compile(instance)
+function M.compile(repl)
 	local response = coroutine.yield()
 	local op = response.op
 	if op ~= accept then
@@ -394,7 +392,7 @@ function M.compile(instance)
 		-- mode, but in such a way that the text will be sent for
 		-- compilation, not evaluation.
 		local data = response.data
-		instance:place_error(data)
+		repl:place_error(data)
 	elseif op ~= compile then
 		-- TODO: handle error
 	end
@@ -405,11 +403,11 @@ function M.compile(instance)
 	if op ~= done then
 		-- TODO handle error
 	end
-	instance:place_output(table.concat(values))
+	repl:place_output(table.concat(values))
 end
 
 -- Produce all functions matching a pattern in all loaded modules.
-function M.apropos(instance)
+function M.apropos(repl)
 	local response = coroutine.yield()
 	local op = response.op
 	if op ~= accept then
@@ -426,11 +424,11 @@ function M.apropos(instance)
 	if op ~= done then
 		-- TODO: Handle error
 	end
-	instance:place_output(table.concat(values, '\t'))
+	repl:place_output(table.concat(values, '\t'))
 end
 
 -- Produce all functions that match the pattern in their docs.
-function M.apropos_doc(instance)
+function M.apropos_doc(repl)
 	local response = coroutine.yield()
 	local op = response.op
 	if op ~= accept then
@@ -447,11 +445,11 @@ function M.apropos_doc(instance)
 	if op ~= done then
 		-- TODO: Handle error
 	end
-	instance:place_output(table.concat(values, '\t'))
+	repl:place_output(table.concat(values, '\t'))
 end
 
 -- Produce all documentation matching a pattern in the function name.
-function M.apropos_show_docs(_instance)
+function M.apropos_show_docs(_repl)
 	local _response = coroutine.yield()
 	-- TODO
 	-- This appear to be broken in Fennel in general
@@ -459,8 +457,8 @@ function M.apropos_show_docs(_instance)
 end
 
 ---Show REPL message in the REPL.
----@param instance FennelRepl
-function M.help(instance)
+---@param repl FennelRepl
+function M.help(repl)
 	local response = coroutine.yield()
 	local op = response.op
 	if op ~= accept then
@@ -479,11 +477,11 @@ function M.help(instance)
 		-- TODO: handle error
 	end
 
-	instance:place_output(table.concat(values, '\t'))
+	repl:place_output(table.concat(values, '\t'))
 end
 
 -- Erase all REPL-scope.
-function M.reset(instance)
+function M.reset(repl)
 	local response = coroutine.yield()
 	local op = response.op
 	if op ~= accept then
@@ -502,11 +500,11 @@ function M.reset(instance)
 		-- TODO: handle error
 	end
 
-	instance:place_output(table.concat(values, '\t'))
+	repl:place_output(table.concat(values, '\t'))
 end
 
 -- Leave the REPL.
-function M.exit(instance)
+function M.exit(repl)
 	local response = coroutine.yield()
 	local op = response.op
 	if op ~= accept then
@@ -518,7 +516,7 @@ function M.exit(instance)
 	if op ~= done then
 		-- TODO: handle error
 	end
-	fn.jobstop(instance.jobid)
+	fn.jobstop(repl.jobid)
 end
 
 -- Ignore the operation.

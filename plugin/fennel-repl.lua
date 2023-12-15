@@ -36,13 +36,13 @@ local function on_stdout(job_id, data, _name)
 	print('Got response: ' .. vim.inspect(data))
 
 	---@type FennelRepl
-	local instance = instances[job_id]
+	local repl = instances[job_id]
 
 	for _, line in ipairs(data) do
 		local success, message = pcall(lib.decode_message, line)
 		if success then
 			local msgid = message.id
-			local callbacks = instance.callbacks
+			local callbacks = repl.callbacks
 			local callback = callbacks[msgid]
 			if callback then
 				coroutine.resume(callback, message)
@@ -53,7 +53,7 @@ local function on_stdout(job_id, data, _name)
 			else
 				print(string.format('No callback for %d found in %s for job %d', msgid, vim.inspect(callbacks), job_id))
 			end
-		elseif not instance.is_init then
+		elseif not repl.is_init then
 			-- Just ignore it, the REPL does not yet adhere to the protocol
 		elseif line ~= '' then
 			-- error(string.format("Could not decode JSON: %s\n%s", message, line))
@@ -70,9 +70,9 @@ end
 
 local function on_exit(job_id, exit_code, _event)
 	---@type FennelRepl
-	local instance = instances[job_id]
-	instance:place_comment((';; Fennel terminated with exit code %d'):format(exit_code))
-	local buffer = instance.buffer
+	local repl = instances[job_id]
+	repl:place_comment((';; Fennel terminated with exit code %d'):format(exit_code))
+	local buffer = repl.buffer
 	fn.prompt_setprompt(buffer, '')
 	instances.drop(nvim_buf_get_var(0, 'fennel_repl_jobid'))
 	fn.prompt_setcallback(buffer, dead_prompt_callback)
@@ -101,12 +101,12 @@ local function repl_start(args)
 		error(string.format("Program '%s' not executable", binary))
 	end
 
-	local instance = instances.new(jobid, command, args)
+	local repl = instances.new(jobid, command, args)
 	-- Could this be a problem if the message has already arrived?
-	instance.callbacks[ 0] = coroutine.create(cb.init)
-	instance.callbacks[-1] = coroutine.create(cb.internal_error)
-	coroutine.resume(instance.callbacks[ 0], instance)
-	coroutine.resume(instance.callbacks[-1], instance)
+	repl.callbacks[ 0] = coroutine.create(cb.init)
+	repl.callbacks[-1] = coroutine.create(cb.internal_error)
+	coroutine.resume(repl.callbacks[ 0], repl)
+	coroutine.resume(repl.callbacks[-1], repl)
 
 	-- Upgrade the REPL
 	-- NOTE: Love2D cannot handle line breaks in the expression
