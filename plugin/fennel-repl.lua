@@ -35,7 +35,7 @@ end
 local function on_stdout(job_id, data, _name)
 	print('Got response: ' .. vim.inspect(data))
 
-	---@type Instance
+	---@type FennelRepl
 	local instance = instances[job_id]
 
 	for _, line in ipairs(data) do
@@ -69,7 +69,7 @@ local function on_stderr(_job_id, data, _name)
 end
 
 local function on_exit(job_id, exit_code, _event)
-	---@type Instance
+	---@type FennelRepl
 	local instance = instances[job_id]
 	instance:place_comment((';; Fennel terminated with exit code %d'):format(exit_code))
 	local buffer = instance.buffer
@@ -101,7 +101,7 @@ local function repl_start(args)
 		error(string.format("Program '%s' not executable", binary))
 	end
 
-	local instance = instances:new(jobid, command, args)
+	local instance = instances.new(jobid, command, args)
 	-- Could this be a problem if the message has already arrived?
 	instance.callbacks[ 0] = coroutine.create(cb.init)
 	instance.callbacks[-1] = coroutine.create(cb.internal_error)

@@ -139,7 +139,7 @@ function M.doc()
 
 	local jobid = vim.b.fennel_repl_jobid
 	if not jobid then return end
-	---@type Instance
+	---@type FennelRepl
 	local repl  = instances[jobid]
 	if not repl then return end
 
@@ -168,7 +168,7 @@ function M.eval()
 
 	local jobid = vim.b.fennel_repl_jobid
 	if not jobid then return end
-	---@type Instance
+	---@type FennelRepl
 	local repl  = instances[jobid]
 	if not repl then return end
 	-- print('Code: ' .. code)

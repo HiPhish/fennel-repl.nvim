@@ -57,7 +57,7 @@ local comma_commands
 ---Callback function for all Fennel prompts
 local function active_prompt_callback(text)
 	local jobid = nvim_buf_get_var(0, 'fennel_repl_jobid')
-	---@type Instance
+	---@type FennelRepl
 	local instance = instances[jobid]
 	local comma_command, comma_arg = string.match(text, '^%s*,(%S+)%s*(.*)')
 
@@ -108,13 +108,13 @@ end
 
 ---Handle an error response from the server.  Prints the error to the REPL
 ---output and parses the traceback (if it exists).
----@param instance Instance
+---@param instance FennelRepl
 local function handle_error_response(instance, response)
 	local type, data, traceback = response.type, response.data, response.traceback
 	instance:place_error(string.format('%s error: %s', type, data))
 	-- Display the traceback
 	if traceback then
-		---@type Instance
+		---@type FennelRepl
 		local instance = instances[nvim_buf_get_var(0, 'fennel_repl_jobid')]
 		-- We have to manually break up the traceback so we can parse each line
 		-- individually
@@ -140,7 +140,7 @@ end
 
 ---Fixed callback for the 'init' operation.  If there was an error initialising
 ---the REPL it will be shut down.
----@param instance Instance
+---@param instance FennelRepl
 function M.init(instance)
 	local jobid = instance.jobid
 	local msg = coroutine.yield()
@@ -319,7 +319,7 @@ function M.doc(instance, on_done)
 end
 
 ---Reload the module.
----@param instance  Instance
+---@param instance  FennelRepl
 ---@param on_done   (fun(values: string[]): any)?
 function M.reload(instance, on_done)
 	local response = coroutine.yield()
@@ -459,7 +459,7 @@ function M.apropos_show_docs(_instance)
 end
 
 ---Show REPL message in the REPL.
----@param instance Instance
+---@param instance FennelRepl
 function M.help(instance)
 	local response = coroutine.yield()
 	local op = response.op
