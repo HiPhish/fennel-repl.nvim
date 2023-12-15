@@ -3,10 +3,11 @@
 local hover = require  'fennel-repl.extra.hover'
 local buffer = require 'fennel-repl.extra.buffer'
 
-local doc   = hover.doc
-local eval  = hover.eval
-local beval = buffer.eval_toplevel
-local eeval = buffer.eval_expr
+local doc    = hover.doc
+local eval   = hover.eval
+local beval  = buffer.eval_toplevel
+local eeval  = buffer.eval_expr
+local reload = buffer.reload
 
 vim.keymap.set('n', '<Plug>(FennelReplDoc)', doc, {
 	noremap = true,
@@ -26,4 +27,9 @@ vim.keymap.set('n', '<Plug>(FennelReplBufferToplevelEval)', beval, {
 vim.keymap.set('n', '<Plug>(FennelReplBufferExprEval)', eeval, {
 	noremap = true,
 	desc = 'Evaluate the expression under the cursor',
+})
+
+vim.keymap.set('n', '<Plug>(FennelReplBufferReload)', reload, {
+	noremap = true,
+	desc = 'Reloads the Fennel module of the current buffer',
 })

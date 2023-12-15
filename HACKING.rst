@@ -61,3 +61,11 @@ this snippet.
 Once the REPL has processed the protocol message it will reply with an initial
 initialisation message.  At this point the protocol has been established and
 the client can present the prompt buffer to the user.
+
+
+About extras
+############
+
+Extras are features which are not necessary for a working REPL, but when are
+useful to have.  They are like plugins, except included by default.  An extra
+must not use internal features, it may only be implemented public APIs.  

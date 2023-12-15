@@ -10,3 +10,8 @@ vim.keymap.set('n', '<leader>se', '<Plug>(FennelReplBufferExprEval)', {
 	noremap = true,
 	buffer = 0,
 })
+
+vim.keymap.set('n', '<leader>sb', '<Plug>(FennelReplBufferReload)', {
+	noremap = true,
+	buffer = 0,
+})

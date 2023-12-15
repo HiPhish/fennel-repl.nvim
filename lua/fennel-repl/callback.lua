@@ -318,8 +318,10 @@ function M.doc(instance, on_done)
 	instance:place_output(table.concat(values, '\t'))
 end
 
--- Reload the module.
-function M.reload(instance)
+---Reload the module.
+---@param instance  Instance
+---@param on_done   (fun(values: string[]): any)?
+function M.reload(instance, on_done)
 	local response = coroutine.yield()
 	local op = response.op
 	if op ~= accept then
@@ -340,6 +342,9 @@ function M.reload(instance)
 	op = response.op
 	if op ~= done then
 		-- TODO: handle error
+	end
+	if on_done then
+		return on_done(values)
 	end
 	instance:place_output(table.concat(values, '\t'))
 end
