@@ -21,18 +21,20 @@
     x
     (add (+ x 1) (- y 1)))))
 
+(print "Hello")
+
 (do
   (var x 9)
   x)
 
-(x)
 ((fn [x] x) 9)
 ((λ [x] x) 9)
-()
 
 (let [x 1
       y 2]
   (print (+ x y)))
+
+(print "World")
 
 (+ 3 4)
 

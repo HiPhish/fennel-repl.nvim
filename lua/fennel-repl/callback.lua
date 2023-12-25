@@ -325,26 +325,35 @@ function M.reload(repl, on_done)
 	if op ~= accept then
 		-- TODO: handle error
 	end
-	response = coroutine.yield()
-	op = response.op
-	if op == error_repl then
-		local data, traceback = response.data, response.traceback
-		coroutine.yield()  -- So we can receive the 'done' instruction
-		repl:place_error(data)
-		repl:place_error(traceback)
-	elseif op ~= reload then
-		-- TODO: handle error
+	while true do
+		response = coroutine.yield()
+		op = response.op
+		if op == reload then
+			local values = response.values
+			if on_done then
+				on_done(values)
+			else
+				repl:place_comment(';; ' .. table.concat(values))
+			end
+			break
+		elseif op == error_repl then
+			local data, traceback = response.data, response.traceback
+			coroutine.yield()  -- So we can receive the 'done' instruction
+			repl:place_error(data)
+			repl:place_error(traceback)
+			break
+		elseif op == print_repl then
+			local descr, data = response.descr, response.data
+			if descr == 'stdout' then
+				repl:place_output(data)
+			end
+		end
 	end
-	local values = response.values
 	response = coroutine.yield()
 	op = response.op
 	if op ~= done then
 		-- TODO: handle error
 	end
-	if on_done then
-		return on_done(values)
-	end
-	repl:place_output(table.concat(values, '\t'))
 end
 
 -- Print the filename and line number for a given function.

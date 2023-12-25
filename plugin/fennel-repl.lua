@@ -56,10 +56,25 @@ local function on_stdout(job_id, data, _name)
 		elseif not repl.is_init then
 			-- Just ignore it, the REPL does not yet adhere to the protocol
 		elseif line ~= '' then
-			-- error(string.format("Could not decode JSON: %s\n%s", message, line))
+			-- Ignore the output
+			--
+			-- NOTE: This is "unsolicited" output, which means the output has
+			-- not been produced by an explicit request from the client, but by
+			-- the server on its own.  There are a couple of sources of
+			-- unsolicited output:
+			--
+			--   - A REPL might echo back the message it was sent (the default
+			--     Fennel REPL does this)
+			--   - A default prompt from the REPL
+			--   - The server called `print` on its own (e.g. as part of the
+			--     application's own source code)
+			--
+			-- Not all unsolicited output is bad.  If it was generated
+			-- intentionally by the application source code we should display
+			-- it.
 		end
 	end
-	nvim_buf_set_option(0, 'modified', false)
+	nvim_buf_set_option(repl.buffer, 'modified', false)
 end
 
 ---Display errors from the REPL as errors in Neovim.
@@ -74,7 +89,7 @@ local function on_exit(job_id, exit_code, _event)
 	repl:place_comment((';; Fennel terminated with exit code %d'):format(exit_code))
 	local buffer = repl.buffer
 	fn.prompt_setprompt(buffer, '')
-	instances.drop(nvim_buf_get_var(0, 'fennel_repl_jobid'))
+	instances.drop(nvim_buf_get_var(repl.buffer, 'fennel_repl_jobid'))
 	fn.prompt_setcallback(buffer, dead_prompt_callback)
 	api.nvim_del_current_line()  -- Remove the trailing prompt
 end
