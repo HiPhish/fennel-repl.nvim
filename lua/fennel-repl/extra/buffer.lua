@@ -136,4 +136,14 @@ function M.reload()
 	repl:send_message(msg, cb.reload, confirm_reload)
 end
 
+---Kill the current REPL process.  This function must be called with the cursor
+---inside a REPL buffer.
+function M.cancel()
+	local jobid = vim.b.fennel_repl_jobid
+	if not jobid then return end
+	local repl = instances[jobid]
+	if not repl then return end
+	fn.jobstop(jobid)
+end
+
 return M

@@ -8,6 +8,7 @@ local eval   = hover.eval
 local beval  = buffer.eval_toplevel
 local eeval  = buffer.eval_expr
 local reload = buffer.reload
+local cancel = buffer.cancel
 
 vim.keymap.set('n', '<Plug>(FennelReplDoc)', doc, {
 	noremap = true,
@@ -32,4 +33,9 @@ vim.keymap.set('n', '<Plug>(FennelReplBufferExprEval)', eeval, {
 vim.keymap.set('n', '<Plug>(FennelReplBufferReload)', reload, {
 	noremap = true,
 	desc = 'Reloads the Fennel module of the current buffer',
+})
+
+vim.keymap.set('n', '<Plug>(FennelReplCancel)', cancel, {
+	noremap = true,
+	desc = 'Cancels the current REPL process',
 })

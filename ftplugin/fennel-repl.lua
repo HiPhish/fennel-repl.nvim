@@ -35,4 +35,10 @@ vim.keymap.set({'n', 'v'}, '<A-k>', '<Plug>(FennelReplEval)', {
 	desc = 'Look up documentation for the word under the cursor'
 })
 
+vim.keymap.set('n', '<C-C>', '<Plug>(FennelReplCancel)', {
+	noremap = true,
+	buffer = 0,
+	desc = 'Cancels the current REPL process',
+})
+
 -- It would be nice if we could also click the traceback with the mouse
