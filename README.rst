@@ -100,6 +100,14 @@ Wishlist
 I don't know if the following are even possible, but here is a list of what
 else I would really like to see.
 
+Value inspector
+---------------
+
+A (floating?) window which lets the user view a table, dig into its values, and
+alter them.  Metatables might complicate this because they allow overwriting
+functionality like indexing.  There is also the question as to how to inspect
+values local to a module.
+
 Debug adapter
 -------------
 
