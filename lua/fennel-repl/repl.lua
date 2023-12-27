@@ -1,3 +1,5 @@
+-- SPDX-License-Identifier: MIT
+
 ---Fennel REPL instance implementation.
 local M = {}
 
