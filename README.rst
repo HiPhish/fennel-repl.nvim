@@ -71,44 +71,57 @@ Status of the plugin
 
 The public interface of the plugin will change.  Do not rely on it.
 
-It works as a basic REPL: you send it text and get text back.  It is the same
-as the REPL you get when you run `fennel` from the command-line.
+The following functionality is available:
 
-These features are absolutely necessary for a fully working REPL:
+- Evaluate Fennel expressions (like the command-line REPL)
+- Execute comma-commands (like the command-line REPL)
+- Interactive stack trace
+- Syntax highlighting (only regular Vim highlighting no Tree-sitter)
+- Auto-completion and symbol documentation
+- Reloading modules from buffers
+- Buffer expression evaluation
 
-- [X] Handling of messages sent to the process standard output
-- [X] Handling of messages received from the process standard input
+What would be nice to have:
 
-There are a lot of niceties to add:
+- REPL history
+- Ability to connect to a running process instead of starting a new one; this
+  would also require the ability to "downgrade" the REPL and disconnect without
+  terminating the process
+- Ability to register new comma-commands
+- Ability to define new sub-commands
+- Option like `--no-upgrade` to not upgrade the REPL (maybe not a good idea?)
+- Auto-completion does not include the type of the completion item (probably
+  not useful with CMP because the type of an object does not map onto an LSP
+  completion type)
 
-- [X] Interactive stacktrace: click a line and get taken to that location
-- [X] Syntax highlighting of user input (piggy-back on Fennel syntax
-  highlighting)
-- [X] Auto-completion on the REPL
-   - [X] Source for nvim-cmp
-   - [X] Include documentation for functions
-   - [ ] Include the type of the completion item (probably not useful with CMP
-     because the type of an object does not map onto an LSP completion type)
-- [X] Documentation lookup (e.g. when pressing `K` while on a symbol)
-- [X] Evaluate an expression (e.g. by pressing `<A-K>` while on a symbol)
-   - [X] Evaluate current symbol
-   - [X] Evaluate current selection
-   - [X] Include printed output in preview window
-   - [X] Handle errors
-   - [ ] Support visual block selection (works, but
-     `vim.lsp.util.open_floating_preview` seems to be broken in prompt buffers
-     with visual block selection)
-- [ ] Cycle through history (e.g. up and down arrows); this is actually hard to
-  achieve because Neovim does not let me overwrite just the user's input and
-  messes up the state of the prompt buffer
+Wishlist
+========
 
-The following features are needed for a robust REPL experience:
+I don't know if the following are even possible, but here is a list of what
+else I would really like to see.
 
-- [X] Option to upgrade a REPL which does not follow the protocol; I will
-  probably have to ship the upgrade function with this plugin
-- [X] Transmitting the formatting function to the server; JSON would be a good
-  choice because Neovim can decode it, but how do I teach the server JSON?
-- [ ] Ability to strip off a prompt received from the server
+Debug adapter
+-------------
+
+When execution hits an error or breakpoint the REPL send a message to the
+editor to start debugging.  The editor then attaches to the debug adapter
+inside the REPL and the two start a debug session.  This would require that the
+editor upload the necessary code to the REPL after initialization.  Then
+whenever a breakpoint is set the editor sends a "breakpoint" message to the
+REPL so it can install the corresponding hook.
+
+Neovim REPL
+-----------
+
+Currently the REPL runs inside a separate process.  For Neovim it would make
+sense if the REPL was running right inside the editor itself.  This would
+require a different class of REPL which does not wrap around a job.
+
+Test runner
+-----------
+
+Integrate with a test runner plugin.  I am not sure if this is really a good
+idea though, tests are meant to run in isolation.
 
 
 License
