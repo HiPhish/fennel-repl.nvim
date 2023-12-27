@@ -139,7 +139,8 @@ end
 ---Fixed callback for the 'init' operation.  If there was an error initialising
 ---the REPL it will be shut down.
 ---@param repl FennelRepl
-function M.init(repl)
+---@param mods table       Command modifiers passed to the initial command
+function M.init(repl, mods)
 	local jobid = repl.jobid
 	local msg = coroutine.yield()
 	local status = msg.status
@@ -166,10 +167,10 @@ function M.init(repl)
 		repl.buffer = buffer
 
 		-- Open the REPL buffer in a new window
-		vim.cmd {cmd = 'sbuffer', args = {fn.string(buffer)}}
-		vim.cmd {cmd = 'setlocal', args = {'nospell'}}
-		vim.cmd 'startinsert'
+		vim.cmd {cmd = 'sbuffer', args = {fn.string(buffer)}, mods = mods}
 		nvim_win_set_option(0, 'number', false)
+		nvim_win_set_option(0,  'spell', false)
+		vim.cmd 'startinsert'
 
 		repl:place_comment(WELCOME_TEMPLATE:format(fennel, lua, protocol))
 	elseif status == error_repl then

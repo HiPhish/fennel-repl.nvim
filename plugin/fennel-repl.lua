@@ -106,21 +106,22 @@ local jobopts = {
 
 ---The actual function behind starting the REPL
 local function repl_start(args)
-	local command = args.fargs
-	local binary = command[1]
+	local mods = args.smods
+	local cmd  = args.fargs
+	local fennel = cmd[1]
 
-	local jobid = fn.jobstart(command, jobopts)
+	local jobid = fn.jobstart(cmd, jobopts)
 	if jobid == 0 then
-		error(string.format("Invalid arguments to '%s': %s", binary, vim.inspect(args.args)))
+		error(string.format("Invalid arguments to '%s': %s", fennel, vim.inspect(args.args)))
 	elseif jobid == -1 then
-		error(string.format("Program '%s' not executable", binary))
+		error(string.format("Program '%s' not executable", fennel))
 	end
 
-	local repl = instances.new(jobid, command, args)
+	local repl = instances.new(jobid, cmd, args)
 	-- Could this be a problem if the message has already arrived?
 	repl.callbacks[ 0] = coroutine.create(cb.init)
 	repl.callbacks[-1] = coroutine.create(cb.internal_error)
-	coroutine.resume(repl.callbacks[ 0], repl)
+	coroutine.resume(repl.callbacks[ 0], repl, mods)
 	coroutine.resume(repl.callbacks[-1], repl)
 
 	-- Upgrade the REPL
@@ -130,4 +131,4 @@ local function repl_start(args)
 end
 
 -- TODO: Should support modifiers like ':vert'
-api.nvim_create_user_command('Fennel', repl_start, {desc = 'Start a Fennel REPL', nargs='*', bang=true})
+api.nvim_create_user_command('Fennel', repl_start, {desc = 'Start a Fennel REPL', nargs='*', bang=false})

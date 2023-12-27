@@ -4,13 +4,6 @@ local xref = require 'fennel-repl.extra.xref'
 
 vim.bo.expandtab = true
 
--- Click tracebacks
-vim.keymap.set('n', 'gx', xref.follow, {
-	buffer = 0,
-	noremap = true,
-	desc = 'Follow a link under the cursor',
-})
-
 -- Copied from Fennel file type settings, except the period is not a keyword
 -- character
 vim.opt.iskeyword = {
@@ -19,6 +12,13 @@ vim.opt.iskeyword = {
 	'48-57', '128-247', '124', '126', '38', '94'
 }
 
+
+-- Click tracebacks
+vim.keymap.set('n', 'gx', xref.follow, {
+	buffer = 0,
+	noremap = true,
+	desc = 'Follow a link under the cursor',
+})
 
 -- These mappings are only for convenience during development, I will remove
 -- them later
