@@ -54,10 +54,9 @@ the REPL yourself.
 Setup
 =====
 
-Execute `:Fennel args...` (e.g. `Fennel love . --repl`) to start the process
-which exposes a Fennel REPL over its standard IO.  This command will change in
-the future!  For now the REPL must conform to the protocol, but later it will
-be possible to upgrade the REPL.
+Execute `:Fennel start <fennelprg> <arg>...` (e.g. `Fennel start love .
+--repl`) to start the process which exposes a Fennel REPL over its standard IO.
+This command might change in the future!
 
 Auto completion
 ===============

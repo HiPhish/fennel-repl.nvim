@@ -2,132 +2,81 @@
 
 local api = vim.api
 local fn  = vim.fn
-local nvim_buf_set_option = api.nvim_buf_set_option
-local nvim_buf_get_var    = api.nvim_buf_get_var
-local nvim_buf_delete     = api.nvim_buf_delete
 
-local lib = require 'fennel-repl.lib'
-local cb  = require 'fennel-repl.callback'
-local gen = require 'fennel-repl.id-generator'
-local instances = require 'fennel-repl.instances'
-
----Code to upgrade the REPL, file names will be spliced in
-local BOOTSTRAP_TEMPLATE = [[
-(let [{: dofile} (require :fennel)
-      protocol (dofile "%s")
-      format/json (dofile "%s")]
-  (protocol format/json))
-]]
+local nvim_err_writeln = api.nvim_err_writeln
 
 local protocol_file = fn.fnamemodify(fn.expand('<sfile>'), ':p:h:h') .. '/_protocol/protocol.fnl'
-local   format_file = fn.fnamemodify(fn.expand('<sfile>'), ':p:h:h') .. '/_format/json.fnl'
 if fn.filereadable(protocol_file) == 0 then
-	api.nvim_err_writeln 'Fennel REPL: missing protocol implementation. Did you check out Git submodules?'
+	nvim_err_writeln 'Fennel REPL: missing protocol implementation. Did you check out Git submodules?'
+end
+
+local command = require 'fennel-repl.command'
+
+local NO_HANDLER_TEMPLATE = 'Unknown Fennel REPL sub-command: %s'
+local NO_FENNEL_TEMPLATE = "Missing Fennel executable in '%s'"
+local START_USAGE = [[
+Usage:  Fennel start [<arg> ...] [--] <fennelprg> [<arg> ...]
+
+  <fennelprg>  The Fennel executable, such as 'fennel' or 'love'
+
+The first set of <arg>s are arguments to this plugin, the second set of <arg>s
+are arguments to the Fennel program.  Use '--' to unambiguously stop parsing
+plugin arguments.]]
+
+
+---Removes the first item of a list, treating it like a FIFO queue.
+local function dequeue(list)
+	local result = list[1]
+	table.remove(list, 1)
+	return result
 end
 
 
----Callback for terminated Fennel process; will delete the buffer when the user
----presses <ENTER>
-local function dead_prompt_callback(_text)
-	nvim_buf_delete(0, {force = true})
-end
+---Handler for the 'start' sub-command.
+local function start_handler(args)
+	local mods   = args.smods
+	local fargs  = fn.copy(args.fargs)
+	local fennel
 
-local function on_stdout(job_id, data, _name)
-	print('Got response: ' .. vim.inspect(data))
-
-	---@type FennelRepl
-	local repl = instances[job_id]
-
-	for _, line in ipairs(data) do
-		local success, message = pcall(lib.decode_message, line)
-		if success then
-			local msgid = message.id
-			local callbacks = repl.callbacks
-			local callback = callbacks[msgid]
-			if callback then
-				coroutine.resume(callback, message)
-				if coroutine.status(callback) == 'dead' then
-					callbacks[msgid] = nil
-					gen:drop(msgid)
-				end
-			else
-				print(string.format('No callback for %d found in %s for job %d', msgid, vim.inspect(callbacks), job_id))
-			end
-		elseif not repl.is_init then
-			-- Just ignore it, the REPL does not yet adhere to the protocol
-		elseif line ~= '' then
-			-- Ignore the output
-			--
-			-- NOTE: This is "unsolicited" output, which means the output has
-			-- not been produced by an explicit request from the client, but by
-			-- the server on its own.  There are a couple of sources of
-			-- unsolicited output:
-			--
-			--   - A REPL might echo back the message it was sent (the default
-			--     Fennel REPL does this)
-			--   - A default prompt from the REPL
-			--   - The server called `print` on its own (e.g. as part of the
-			--     application's own source code)
-			--
-			-- Not all unsolicited output is bad.  If it was generated
-			-- intentionally by the application source code we should display
-			-- it.
+	while true do
+		local arg = dequeue(fargs)
+		if not arg then
+			nvim_err_writeln(START_USAGE)
+			return
+		elseif arg == '--' then
+			fennel = dequeue(fargs)
+			break
+		elseif not arg:match('^-.*') then
+			fennel = arg
+			break
 		end
+		-- Plugin arguments can be handled here.
 	end
-	nvim_buf_set_option(repl.buffer, 'modified', false)
+
+	if not fennel then
+		nvim_err_writeln(NO_FENNEL_TEMPLATE:format(fn.join(args.fargs, ' ')))
+		return
+	end
+
+	command.start(fennel, fargs, mods)
 end
 
----Display errors from the REPL as errors in Neovim.
-local function on_stderr(_job_id, data, _name)
-	api.nvim_out_write(fn.join(data, '\n'))
-	api.nvim_out_write('\n')
-end
 
-local function on_exit(job_id, exit_code, _event)
-	---@type FennelRepl
-	local repl = instances[job_id]
-	repl:place_comment((';; Fennel terminated with exit code %d'):format(exit_code))
-	local buffer = repl.buffer
-	fn.prompt_setprompt(buffer, '')
-	instances.drop(nvim_buf_get_var(repl.buffer, 'fennel_repl_jobid'))
-	fn.prompt_setcallback(buffer, dead_prompt_callback)
-	api.nvim_del_current_line()  -- Remove the trailing prompt
-end
-
----Fixed options for all newly created jobs
-local jobopts = {
-	on_stdout = on_stdout,
-	on_stderr = on_stderr,
-	on_exit   = on_exit,
-	stderr_buffered = false,
-	stdout_buffered = false,
+---Maps sub-commands to their respective handlers.
+local subcmd_handlers = {
+	start = start_handler,
 }
-
 
 ---The actual function behind starting the REPL
 local function repl_start(args)
-	local mods = args.smods
-	local cmd  = args.fargs
-	local fennel = cmd[1]
+	local subcmd = dequeue(args.fargs)
 
-	local jobid = fn.jobstart(cmd, jobopts)
-	if jobid == 0 then
-		error(string.format("Invalid arguments to '%s': %s", fennel, vim.inspect(args.args)))
-	elseif jobid == -1 then
-		error(string.format("Program '%s' not executable", fennel))
+	local handler = subcmd_handlers[subcmd]
+	if not handler then
+		api.nvim_err_writeln(NO_HANDLER_TEMPLATE:format(subcmd))
+		return
 	end
-
-	local repl = instances.new(jobid, cmd, args)
-	-- Could this be a problem if the message has already arrived?
-	repl.callbacks[ 0] = coroutine.create(cb.init)
-	repl.callbacks[-1] = coroutine.create(cb.internal_error)
-	coroutine.resume(repl.callbacks[ 0], repl, mods)
-	coroutine.resume(repl.callbacks[-1], repl)
-
-	-- Upgrade the REPL
-	-- NOTE: Love2D cannot handle line breaks in the expression
-	local expr = BOOTSTRAP_TEMPLATE:gsub('\n', ' '):format(protocol_file, format_file)
-	vim.fn.chansend(jobid, {expr, ''})
+	handler(args)
 end
 
 -- TODO: Should support modifiers like ':vert'
