@@ -4,7 +4,7 @@
 local M = {}
 
 
-local nvim_err_writeln       = vim.api.nvim_err_writeln
+local nvim_err_writeln = vim.api.nvim_err_writeln
 
 
 --- Maps the second character from an escape sequence to its actual character
@@ -19,7 +19,8 @@ local escape_chars = {
 }
 
 ---Namespace for all Fennel REPL extmarks.
-M.namespace = vim.api.nvim_create_namespace('')
+---@type integer
+M.namespace = vim.api.nvim_create_namespace('Fennel-REPL')
 
 
 ---Escape a message value to be safe for transport to the REPL server.  This

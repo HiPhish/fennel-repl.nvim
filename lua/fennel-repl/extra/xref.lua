@@ -3,8 +3,8 @@
 ---Functions for dealing with cross-references
 local M = {}
 
+local frepl = require 'fennel-repl'
 local nvim_list_wins      = vim.api.nvim_list_wins
-local instances           = require 'fennel-repl.instances'
 local nvim_buf_get_var    = vim.api.nvim_buf_get_var
 local nvim_win_get_buf    = vim.api.nvim_win_get_buf
 local nvim_win_set_cursor = vim.api.nvim_win_set_cursor
@@ -14,12 +14,12 @@ local nvim_win_set_cursor = vim.api.nvim_win_set_cursor
 ---traceback messages to jump to the indicated file and line.  If there already
 ---is a window open we jump to it, otherwise we open a new window.
 function M.follow()
-	local repl = instances[nvim_buf_get_var(0, 'fennel_repl_jobid')]
+	local repl = frepl.get_instance(nvim_buf_get_var(0, 'fennel_repl_jobid'))
 	local file, lnum
 
 	-- Try to find an extmark at the cursor position
 	for _, info in ipairs(vim.inspect_pos().extmarks) do
-		if info.ns_id == M.namespace then
+		if info.ns_id == frepl.namespace then
 			local link = repl.links[info.id]
 			if link then
 				file = link.file
@@ -44,7 +44,8 @@ function M.follow()
 	end
 
 	-- No window found, open a new one
-	vim.cmd {cmd = 'split', args = {vim.fn.fnamemodify(file, ':~:.')}}
+	local fname = vim.fn.fnamemodify(file, ':~:.')
+	vim.cmd {cmd = 'split', args = {fname}}
 	nvim_win_set_cursor(0, {lnum, 0})
 end
 
