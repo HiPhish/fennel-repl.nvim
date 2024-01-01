@@ -9,7 +9,9 @@ local M = {
 	count = 0,
 }
 
-local Repl = require 'fennel-repl.repl'
+---Maps instance IDs to actual instance objects.
+---@type table<integer, FennelRepl>
+local instances = {}
 
 ---Stack of active REPL job IDs.  The last entry is most recent.
 ---@type integer[]
@@ -17,24 +19,21 @@ local stack = {}
 
 
 ---Sets up and registers a new REPL instance.
----@param jobid   integer  ID of the REPL process job
----@param command string   Command executed by the OS to launch the REPL
----@param args    string[] Command arguments
+---@param instance FennelRepl  REPL instance to register
 ---@return FennelRepl instance  The new REPL instance object.
-function M.new(jobid, command, args)
-	local instance = Repl.new(jobid, command, args)
-	M[jobid] = instance
+function M.register(instance)
+	local id = instance.id
+	instances[id] = instance
 	M.count = M.count + 1
-	table.insert(stack, jobid)
+	table.insert(stack, id)
 	return instance
 end
 
 ---Unregisters a REPL instance.
----@param jobid integer  ID of the REPL process job
-function M.drop(jobid)
-	M[jobid] = nil
+---@param id integer  ID of the REPL instance
+function M.drop(id)
 	for i, other_id in ipairs(stack) do
-		if other_id == jobid then
+		if other_id == id then
 			table.remove(stack, i)
 			break
 		end
@@ -42,14 +41,21 @@ function M.drop(jobid)
 	M.count = M.count - 1
 end
 
+---Retrieves a REPL instance from its instance ID.
+---@param id integer  Instance ID
+---@return FennelRepl?
+function M.get(id)
+	return instances[id]
+end
+
 ---Returns the last REPL started, if any.
 ---@return FennelRepl?
 function M.get_topmost()
-	local job_id = stack[#stack]
-	if not job_id then
+	local id = stack[#stack]
+	if not id then
 		return nil
 	end
-	return M[job_id]
+	return instances[id]
 end
 
 return M

@@ -13,7 +13,7 @@ local reduce     = vim.fn.reduce
 local srepeat    = vim.fn['repeat']
 local fn         = vim.fn
 local api        = vim.api
-local instances  = require 'fennel-repl.instances'
+local frepl      = require 'fennel-repl'
 local op         = require 'fennel-repl.operation'
 local cb         = require 'fennel-repl.callback'
 
@@ -137,13 +137,10 @@ function M.doc()
 	local sym = get_word()
 	if not sym then return end
 
-	local jobid = vim.b.fennel_repl_jobid
-	if not jobid then return end
-	---@type FennelRepl
-	local repl  = instances[jobid]
+	local id = vim.b.fennel_repl_id
+	if not id then return end
+	local repl  = frepl.get_instance(id)
 	if not repl then return end
-
-	local msg = op.doc(sym)
 
 	-- Fetch docstring from REPL and add it to the item
 	local display_doc = function(values)
@@ -166,10 +163,9 @@ function M.eval()
 	end
 	if not code then return end
 
-	local jobid = vim.b.fennel_repl_jobid
-	if not jobid then return end
-	---@type FennelRepl
-	local repl  = instances[jobid]
+	local id = vim.b.fennel_repl_id
+	if not id then return end
+	local repl  = frepl.get_instance(id)
 	if not repl then return end
 	-- print('Code: ' .. code)
 

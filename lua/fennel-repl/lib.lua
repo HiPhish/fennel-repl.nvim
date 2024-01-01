@@ -18,11 +18,6 @@ local escape_chars = {
     v = '\v',
 }
 
----Namespace for all Fennel REPL extmarks.
----@type integer
-M.namespace = vim.api.nvim_create_namespace('Fennel-REPL')
-
-
 ---Escape a message value to be safe for transport to the REPL server.  This
 ---involves escaping double quote characters and turning line breaks into '\\n'
 ---(a backslash character followed by the letter 'n').  We cannot transport

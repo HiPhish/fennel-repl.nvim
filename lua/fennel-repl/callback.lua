@@ -10,6 +10,7 @@ local nvim_buf_set_name    = api.nvim_buf_set_name
 local nvim_buf_set_extmark = api.nvim_buf_set_extmark
 local instances            = require 'fennel-repl.instances'
 local lib                  = require 'fennel-repl.lib'
+local const                = require 'fennel-repl.const'
 
 local op  = require 'fennel-repl.operation'
 
@@ -56,9 +57,8 @@ local comma_commands
 
 ---Callback function for all Fennel prompts
 local function active_prompt_callback(text)
-	local jobid = nvim_buf_get_var(0, 'fennel_repl_jobid')
-	---@type FennelRepl
-	local repl = instances[jobid]
+	local repl = instances.get(nvim_buf_get_var(0, 'fennel_repl_id'))
+	if not repl then return end
 	local comma_command, comma_arg = string.match(text, '^%s*,(%S+)%s*(.*)')
 
 	local message, callback
@@ -127,8 +127,8 @@ local function handle_error_response(repl, response)
 					hl_group = 'fennelReplErrorLink',
 					hl_mode = 'combine',
 				}
-				local extmark = nvim_buf_set_extmark(0, lib.namespace, lnum, start - 1, opts)
-				repl.links[extmark] = {file = file, lnum = tonumber(pos)}
+				local extmark = nvim_buf_set_extmark(0, const.namespace, lnum, start - 1, opts)
+				repl.links[extmark] = {file = file, lnum = tonumber(pos) or 0}
 			end
 		end
 	end
@@ -141,7 +141,7 @@ end
 ---@param repl FennelRepl
 ---@param mods table       Command modifiers passed to the initial command
 function M.init(repl, mods)
-	local jobid = repl.jobid
+	local id = repl.id
 	local msg = coroutine.yield()
 	local status = msg.status
 
@@ -159,8 +159,8 @@ function M.init(repl, mods)
 			nvim_buf_set_option(buffer, 'buflisted', false)
 			nvim_buf_set_option(buffer, 'swapfile', false)
 			nvim_buf_set_option(buffer, 'filetype', 'fennel-repl')
-			nvim_buf_set_var(buffer, 'fennel_repl_jobid', jobid)
-			nvim_buf_set_name(buffer, string.format('Fennel REPL (%d)', jobid))
+			nvim_buf_set_var(buffer, 'fennel_repl_id', id)
+			nvim_buf_set_name(buffer, string.format('Fennel REPL (%d)', id))
 			fn.prompt_setprompt(buffer, BASE_PROMPT)
 			fn.prompt_setcallback(buffer, active_prompt_callback)
 		end
@@ -175,7 +175,7 @@ function M.init(repl, mods)
 		repl:place_comment(WELCOME_TEMPLATE:format(fennel, lua, protocol))
 	elseif status == error_repl then
 		local data = msg.data
-		fn.jobstop(jobid)
+		repl:terminate()
 		error(string.format('Error initialising Fennel REPL, status is %s', data))
 	end
 end
@@ -526,7 +526,7 @@ function M.exit(repl)
 	if op ~= done then
 		-- TODO: handle error
 	end
-	fn.jobstop(repl.jobid)
+	repl:terminate()
 end
 
 -- Ignore the operation.

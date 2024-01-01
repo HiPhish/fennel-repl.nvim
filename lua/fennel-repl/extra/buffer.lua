@@ -139,11 +139,11 @@ end
 ---Kill the current REPL process.  This function must be called with the cursor
 ---inside a REPL buffer.
 function M.cancel()
-	local jobid = vim.b.fennel_repl_jobid
-	if not jobid then return end
-	local repl = instances[jobid]
+	local id = vim.b.fennel_repl_id
+	if not id then return end
+	local repl = instances.get(id)
 	if not repl then return end
-	fn.jobstop(jobid)
+	repl:terminate()
 end
 
 return M

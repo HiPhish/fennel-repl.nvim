@@ -4,18 +4,12 @@
 ---plugin.
 local M = {}
 
-local lib = require 'fennel-repl.lib'
+local const = require 'fennel-repl.const'
 local instances = require 'fennel-repl.instances'
 
 ---Namespace for all Fennel REPL extmarks.
-M.namespace = lib.namespace
-
----Returns a Fennel REPL instance with the given Job ID.
----@param jobid integer  ID of the REPL job
----@return FennelRepl
-function M.get_instance(jobid)
-	return instances[jobid]
-end
+M.namespace = const.namespace
+M.get_instance = instances.get
 
 
 return M

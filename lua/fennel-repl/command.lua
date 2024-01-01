@@ -6,9 +6,9 @@ local M = {}
 local fn  = vim.fn
 local api = vim.api
 local nvim_buf_set_option = api.nvim_buf_set_option
-local nvim_buf_get_var    = api.nvim_buf_get_var
 local nvim_buf_delete     = api.nvim_buf_delete
 
+local JobRepl = require 'fennel-repl.repl.job'
 local instances = require 'fennel-repl.instances'
 local lib = require 'fennel-repl.lib'
 local cb  = require 'fennel-repl.callback'
@@ -28,6 +28,10 @@ if fn.filereadable(protocol_file) == 0 then
 	api.nvim_err_writeln 'Fennel REPL: missing protocol implementation. Did you check out Git submodules?'
 end
 
+---Maps job IDs to REPL IDs
+---@type table<integer, integer>
+local jobs = {}
+
 
 ---Callback for terminated Fennel process; will delete the buffer when the user
 ---presses <ENTER>
@@ -38,8 +42,8 @@ end
 local function on_stdout(job_id, data, _name)
 	print('Got response: ' .. vim.inspect(data))
 
-	---@type FennelRepl
-	local repl = instances[job_id]
+	local repl = instances.get(jobs[job_id])
+	if not repl then return end
 
 	for _, line in ipairs(data) do
 		local success, message = pcall(lib.decode_message, line)
@@ -87,14 +91,17 @@ local function on_stderr(_job_id, data, _name)
 end
 
 local function on_exit(job_id, exit_code, _event)
-	---@type FennelRepl
-	local repl = instances[job_id]
-	repl:place_comment((';; Fennel terminated with exit code %d'):format(exit_code))
+	local repl = instances.get(jobs[job_id])
+	if not repl then return end
 	local buffer = repl.buffer
+	if not repl then return end
+	repl:place_comment((';; Fennel terminated with exit code %d'):format(exit_code))
 	fn.prompt_setprompt(buffer, '')
-	instances.drop(nvim_buf_get_var(repl.buffer, 'fennel_repl_jobid'))
 	fn.prompt_setcallback(buffer, dead_prompt_callback)
 	api.nvim_del_current_line()  -- Remove the trailing prompt
+	repl:on_exit()
+	instances.drop(repl.id)
+	jobs[job_id] = nil
 end
 
 ---Fixed options for all newly created jobs
@@ -116,7 +123,8 @@ function M.start(fennel, args, mods)
 		error(string.format("Program '%s' not executable", fennel))
 	end
 
-	local repl = instances.new(jobid, fennel, args)
+	local repl = instances.register(JobRepl:new {jobid = jobid, cmd = fennel, args = args})
+	jobs[jobid] = repl.id
 	-- Could this be a problem if the message has already arrived?
 	repl.callbacks[ 0] = coroutine.create(cb.init)
 	repl.callbacks[-1] = coroutine.create(cb.internal_error)

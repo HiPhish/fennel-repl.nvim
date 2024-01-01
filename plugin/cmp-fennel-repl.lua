@@ -11,9 +11,9 @@
 local has_cmp, cmp = pcall(require, 'cmp')
 if not has_cmp then return end
 
-local instances = require 'fennel-repl.instances'
-local op        = require 'fennel-repl.operation'
-local cb        = require 'fennel-repl.callback'
+local frepl = require 'fennel-repl'
+local op    = require 'fennel-repl.operation'
+local cb    = require 'fennel-repl.callback'
 
 ---Completion source for cmp-nvim
 local source = {}
@@ -56,10 +56,9 @@ end
 ---The source is available if the current buffer has a Fennel REPL job ID and
 ---the job is still running.
 function source:is_available()
-	local jobid = vim.b.fennel_repl_jobid
-	if not jobid then return false end
-	local success = pcall(vim.fn.jobpid, jobid)
-	return success
+	local repl = frepl.get_instance(vim.b.fennel_repl_id)
+	if not repl then return false end
+	return true
 end
 
 ---Table access triggers completion
@@ -74,9 +73,10 @@ function source:complete(_params, callback)
 	local input = get_current_word()
 	if #input == 0 then return end
 
-	local jobid = vim.b.fennel_repl_jobid
-	local repl  = instances[jobid]
-	local msg   = op.complete(input)
+	local id   = vim.b.fennel_repl_id
+	local repl = frepl.get_instance(id)
+	if not repl then return end
+	local msg  = op.complete(input)
 
 	local function process_completion(values)
 		callback(vim.tbl_map(value_to_item, values))
@@ -89,9 +89,10 @@ end
 ---@param item lsp.CompletionItem
 ---@param callback fun(completion_item: lsp.CompletionItem|nil)
 function source:resolve(item, callback)
-	local sym = item.labelDetails.description or ''
-	local jobid = vim.b.fennel_repl_jobid
-	local repl  = instances[jobid]
+	local sym  = item.labelDetails.description or ''
+	local id   = vim.b.fennel_repl_id
+	local repl = frepl.get_instance(id)
+	if not repl then return end
 	local msg   = op.doc(sym)
 
 	-- Fetch docstring from REPL and add it to the item
