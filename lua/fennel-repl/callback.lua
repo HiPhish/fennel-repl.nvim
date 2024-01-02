@@ -111,7 +111,28 @@ end
 ---@param repl FennelRepl
 local function handle_error_response(repl, response)
 	local type, data, traceback = response.type, response.data, response.traceback
-	repl:place_error(string.format('%s error: %s', type, data))
+	repl:place_error(string.format('%s error:', type))
+
+	-- The output might contain ANSI escape sequences which we will replace
+	-- with extmarks here.
+	local ansi_pattern = '%[7m(.+)%[0m'
+	for _, line in ipairs(fn.split(lib.unescape(data), '\n')) do
+		local start, stop = line:find()
+		if start then
+			line = line:gsub(ansi_pattern, '%1')
+		end
+		repl:place_error(line)
+		if start then
+			local lnum = fn.line('$') - 2
+			local opts = {
+				end_col = stop - 8,
+				hl_group = 'fennelReplErrorRange',
+				hl_mode = 'combine',
+			}
+			nvim_buf_set_extmark(0, const.namespace, lnum, start - 1, opts)
+		end
+	end
+
 	-- Display the traceback
 	if traceback then
 		-- We have to manually break up the traceback so we can parse each line
@@ -132,6 +153,7 @@ local function handle_error_response(repl, response)
 			end
 		end
 	end
+
 	_, response = coroutine.yield()
 	return response
 end

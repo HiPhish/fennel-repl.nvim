@@ -25,7 +25,8 @@ highlight default link fennelReplWarning      WarningMsg
 highlight default link fennelReplStdout       Normal
 highlight default link fennelReplFunctionRep  Normal
 
-" This is used for extmarks only and will be overlaid on top of the base group
-highlight default fennelReplErrorLink gui=underline cterm=underline
+" These are used for extmarks only and will be overlaid on top of the base group
+highlight default fennelReplErrorLink  gui=underline cterm=underline
+highlight default fennelReplErrorRange gui=undercurl cterm=undercurl
 
 let b:current_syntax = 'fennel-repl'
