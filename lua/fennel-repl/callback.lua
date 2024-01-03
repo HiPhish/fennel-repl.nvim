@@ -117,7 +117,7 @@ local function handle_error_response(repl, response)
 	-- with extmarks here.
 	local ansi_pattern = '%[7m(.+)%[0m'
 	for _, line in ipairs(fn.split(lib.unescape(data), '\n')) do
-		local start, stop = line:find()
+		local start, stop = line:find(ansi_pattern)
 		if start then
 			line = line:gsub(ansi_pattern, '%1')
 		end
