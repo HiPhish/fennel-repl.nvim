@@ -1,6 +1,6 @@
 -- SPDX-License-Identifier: MIT
 
----Implementation of the Fennel command
+---Implementation of the FennelRepl command
 local M = {}
 
 local fn  = vim.fn

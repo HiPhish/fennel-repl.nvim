@@ -80,4 +80,4 @@ local function repl_start(args)
 end
 
 -- TODO: Should support modifiers like ':vert'
-api.nvim_create_user_command('Fennel', repl_start, {desc = 'Start a Fennel REPL', nargs='*', bang=false})
+api.nvim_create_user_command('FennelRepl', repl_start, {desc = 'Start a Fennel REPL', nargs='*', bang=false})
